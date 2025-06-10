@@ -2,8 +2,6 @@
 
 [Raw docs](./docs/)
 
-[TODO - put your Github Pages url here](TODO)
-
 This is a package that exposes somme helpful utility methods for working with pulumi outputs (in typescript).
 Primarily, this package provides a standard interface for depending on outputs so that you keep some standard
 ways of identifying "api checks and operations" that we want to run before making/updating/deleting resources.

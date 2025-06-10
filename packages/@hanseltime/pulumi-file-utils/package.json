@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-file-utils",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "A utility library that helps enforce things like relative file paths to ensure cross-machine previews and tmp folder builds of archives for ease of use",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",
@@ -51,7 +51,7 @@
 		"build:types": "tsc",
 		"build": "yarn build:types && yarn build:esm && yarn build:cjs && yarn build:bin",
 		"release": "yarn semantic-release",
-		"ts-run": "./bin/ts-run.sh"
+		"typedoc": "typedoc"
 	},
 	"publishConfig": {
 		"access": "public"

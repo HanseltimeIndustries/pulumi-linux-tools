@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-linux-base",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Base functions as a shared component of other @hanseltime/pulumi-linux packages",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",
@@ -51,7 +51,7 @@
 		"build:types": "tsc",
 		"build": "yarn build:types && yarn build:esm && yarn build:cjs && yarn build:bin",
 		"release": "yarn semantic-release",
-		"ts-run": "./bin/ts-run.sh"
+		"typedoc": "typedoc"
 	},
 	"publishConfig": {
 		"access": "public"

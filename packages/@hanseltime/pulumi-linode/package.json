@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-linode",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Higher level abstractions for Linode Resources that enforce visibility and better practices",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",
@@ -50,7 +50,7 @@
 		"build:types": "tsc",
 		"build": "yarn build:types && yarn build:esm && yarn build:cjs && yarn build:bin",
 		"release": "yarn semantic-release",
-		"ts-run": "./bin/ts-run.sh"
+		"typedoc": "typedoc"
 	},
 	"publishConfig": {
 		"access": "public"

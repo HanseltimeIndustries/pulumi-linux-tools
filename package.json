@@ -1,14 +1,12 @@
 {
 	"name": "@hanseltime/pulumi-linux-tools",
 	"description": "monorepo holding pulumi typescript packages for linux and linode based resource patterns and examples",
-	"workspaces": [
-		"packages/@hanseltime/*",
-		"examples/*"
-	],
+	"workspaces": ["packages/@hanseltime/*", "examples/*"],
 	"scripts": {
 		"lint": "biome lint",
 		"format": "biome format",
-		"build": "yarn workspaces foreach -At run build"
+		"build": "yarn workspaces foreach -At run build",
+		"typedoc": "yarn workspaces foreach -At run typedoc"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
