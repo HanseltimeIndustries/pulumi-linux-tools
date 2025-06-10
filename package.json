@@ -1,7 +1,10 @@
 {
 	"name": "@hanseltime/pulumi-linux-tools",
 	"description": "monorepo holding pulumi typescript packages for linux and linode based resource patterns and examples",
-	"workspaces": ["packages/@hanseltime/*", "examples/*"],
+	"workspaces": [
+		"packages/@hanseltime/*",
+		"examples/*"
+	],
 	"scripts": {
 		"lint": "biome lint",
 		"format": "biome format",
@@ -16,6 +19,7 @@
 		"typescript": "^5.0.0"
 	},
 	"dependencies": {
+		"@changesets/cli": "^2.29.4",
 		"@hanseltime/compose-types": "^1.1.0",
 		"@hanseltime/pulumi-file-utils": "workspace:^",
 		"@pulumi/command": "^1.0.3",
