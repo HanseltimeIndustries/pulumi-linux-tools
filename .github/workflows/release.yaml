@@ -4,7 +4,7 @@ run-name: ${{ github.ref_name }} Release
 on:
   push:
     branches: 
-      - main
+      - master
       - alpha
 
 env:
@@ -31,7 +31,7 @@ jobs:
       - name: Get prerelease command
         id: prerelease
         run: |
-          if [ "$BRANCH_NAME" == "main" ]; then
+          if [ "$BRANCH_NAME" == "master" ]; then
             echo 'precommand="if [ -f .changeset/pre.json ]; then yarn changeset pre exit; fi"' >> $GITHUB_OUTPUT
           elif [ "$BRANCH_NAME" == "alpha" ]; then
             echo 'precommand="yarn changeset pre enter alpha"' >> $GITHUB_OUTPUT
