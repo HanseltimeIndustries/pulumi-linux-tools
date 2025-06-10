@@ -62,7 +62,7 @@ jobs:
         uses: jamilomar/autopublish-changesets-action@4f9b15bd1f52a161e29f32ef42b712555d987f83
         with:
           # script to be used to publish the pr (changeset version by default)
-          versionScript: ${{ steps.prerelease.outputs.precommand }} && yarn changeset version && yarn format --fix
+          versionScript: ${{ steps.prerelease.outputs.precommand[1:-1] }} && yarn changeset version && yarn format --fix
           # script to be used to publish the pr 
           publishScript: changeset publish
           # commit message
