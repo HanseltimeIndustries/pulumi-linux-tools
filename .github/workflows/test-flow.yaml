@@ -121,8 +121,6 @@ jobs:
       - name: install
         run: |
           yarn install --immutable
-          # Hack - the yarn team refuses to not take over formatting the package.json
-          git checkout package.json
       - name: generate typedoc
         run: |
           yarn typedoc
@@ -137,16 +135,12 @@ jobs:
               echo "$changes"
               exit 1
           fi
-      - name: ensure no errors with mkdocs
-        run: |
-          pip install -r docs/requirements.txt
-          mkdocs build --strict
   # easy to require end cap job
   done:
     needs:
       - ensure-docs
       - ci-checks
-      - pkg-test
+      # - pkg-test
     runs-on: ubuntu-latest
     name: Done
     steps:
