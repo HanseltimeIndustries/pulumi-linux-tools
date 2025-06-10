@@ -1,5 +1,17 @@
 # @hanseltime/pulumi-linux-docker
 
+## 1.0.2
+
+### Patch Changes
+
+- 2fe936e: Forcing patch bump for initial change sets
+- Updated dependencies [2fe936e]
+  - @hanseltime/pulumi-file-utils@1.0.2
+  - @hanseltime/pulumi-linux@1.0.2
+  - @hanseltime/pulumi-linux-base@1.0.2
+  - @hanseltime/pulumi-linux-iptables@1.0.2
+  - @hanseltime/traefik@0.1.2
+
 ## 1.0.1
 
 ### Patch Changes

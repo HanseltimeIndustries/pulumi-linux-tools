@@ -1,5 +1,15 @@
 # @hanseltime/pulumi-linode
 
+## 0.1.2
+
+### Patch Changes
+
+- 2fe936e: Forcing patch bump for initial change sets
+- Updated dependencies [2fe936e]
+  - @hanseltime/pulumi-linux@1.0.2
+  - @hanseltime/pulumi-linux-base@1.0.2
+  - @hanseltime/pulumi-utils@1.0.2
+
 ## 0.1.1
 
 ### Patch Changes

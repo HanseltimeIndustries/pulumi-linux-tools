@@ -1,5 +1,13 @@
 # @hanseltime/pulumi-linux-iptables
 
+## 1.0.2
+
+### Patch Changes
+
+- 2fe936e: Forcing patch bump for initial change sets
+- Updated dependencies [2fe936e]
+  - @hanseltime/pulumi-linux-base@1.0.2
+
 ## 1.0.1
 
 ### Patch Changes
