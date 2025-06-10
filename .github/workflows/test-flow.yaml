@@ -45,7 +45,8 @@ jobs:
           yarn format
       - name: testing
         run: |
-          yarn test
+          echo "Skipping test runs since unit testing is not set up yet"
+          # yarn test
   # Currently, we're not running pkg test for pulumi at this moment
   # pkg-test:
   #   needs:
