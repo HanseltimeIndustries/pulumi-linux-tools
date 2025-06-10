@@ -1,0 +1,123 @@
+Current stack is prod:
+    Owner: hanseltime
+    Last updated: 5 minutes ago (2025-05-21 08:42:40.007901658 -0600 MDT)
+    Pulumi version used: v3.170.0
+Current stack resources (55):
+    TYPE                                  NAME
+    pulumi:pulumi:Stack                   iac-deploy-prod
+    │  URN: urn:pulumi:prod::iac-deploy::pulumi:pulumi:Stack::iac-deploy-prod
+    ├─ Custom:Linode:LinodeInstance       test9
+    │  │  URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance::test9
+    │  ├─ linode:index/instance:Instance  test9instance
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$linode:index/instance:Instance::test9instance
+    │  ├─ Custom:CustomLinux:Users        test9nathan
+    │  │  │  URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$Custom:CustomLinux:Users::test9nathan
+    │  │  └─ command:remote:Command       test9nathancreate-user
+    │  │        URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$Custom:CustomLinux:Users$command:remote:Command::test9nathancreate-user
+    │  ├─ command:remote:Command          test9get-root-dir
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test9get-root-dir
+    │  ├─ command:remote:Command          test9-clear-previous-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test9-clear-previous-keys-root
+    │  ├─ command:remote:Command          test9-clear-previous-keys-nathan
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test9-clear-previous-keys-nathan
+    │  ├─ command:remote:CopyToRemote     test9-public-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:CopyToRemote::test9-public-keys-root
+    │  ├─ command:remote:Command          test9-update-authorized-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test9-update-authorized-keys-root
+    │  ├─ command:remote:CopyToRemote     test9-public-keys-nathan
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:CopyToRemote::test9-public-keys-nathan
+    │  └─ command:remote:Command          test9-update-authorized-keys-nathan
+    │        URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test9-update-authorized-keys-nathan
+    ├─ Custom:Linode:LinodeInstance       test5
+    │  │  URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance::test5
+    │  ├─ linode:index/instance:Instance  test5instance
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$linode:index/instance:Instance::test5instance
+    │  ├─ Custom:CustomLinux:Users        test5nathan
+    │  │  │  URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$Custom:CustomLinux:Users::test5nathan
+    │  │  └─ command:remote:Command       test5nathancreate-user
+    │  │        URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$Custom:CustomLinux:Users$command:remote:Command::test5nathancreate-user
+    │  ├─ command:remote:Command          test5get-root-dir
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5get-root-dir
+    │  ├─ command:remote:Command          test5-clear-previous-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5-clear-previous-keys-root
+    │  ├─ command:remote:Command          test5-clear-previous-keys-nathan
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5-clear-previous-keys-nathan
+    │  ├─ command:remote:CopyToRemote     test5-public-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:CopyToRemote::test5-public-keys-root
+    │  ├─ command:remote:CopyToRemote     test5-public-keys-nathan
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:CopyToRemote::test5-public-keys-nathan
+    │  ├─ command:remote:Command          test5-update-authorized-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5-update-authorized-keys-root
+    │  ├─ command:remote:Command          test5-update-authorized-keys-nathan
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5-update-authorized-keys-nathan
+    │  ├─ command:remote:CopyToRemote     test5-public-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:CopyToRemote::test5-public-keys-root
+    │  ├─ command:remote:CopyToRemote     test5-public-keys-nathan
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:CopyToRemote::test5-public-keys-nathan
+    │  ├─ command:remote:Command          test5-update-authorized-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5-update-authorized-keys-root
+    │  ├─ command:remote:Command          test5-update-authorized-keys-nathan
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5-update-authorized-keys-nathan
+    │  ├─ command:remote:Command          test5-clear-previous-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5-clear-previous-keys-root
+    │  ├─ command:remote:Command          test5-clear-previous-keys-nathan
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:Command::test5-clear-previous-keys-nathan
+    │  ├─ command:remote:CopyToRemote     test5-public-keys-root
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:CopyToRemote::test5-public-keys-root
+    │  └─ command:remote:CopyToRemote     test5-public-keys-nathan
+    │        URN: urn:pulumi:prod::iac-deploy::Custom:Linode:LinodeInstance$command:remote:CopyToRemote::test5-public-keys-nathan
+    ├─ command:remote:Command             test8-docker-install-docker-install
+    │     URN: urn:pulumi:prod::iac-deploy::command:remote:Command::test8-docker-install-docker-install
+    ├─ Custom:Linux:DockerInstall         test8-docker-install
+    │  │  URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall::test8-docker-install
+    │  ├─ command:remote:CopyToRemote     test8-docker-install-docker-release-plugin
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall$command:remote:CopyToRemote::test8-docker-install-docker-release-plugin
+    │  ├─ command:remote:Command          test8-docker-install-make-executable
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall$command:remote:Command::test8-docker-install-make-executable
+    │  └─ Custom:Linux:BuildDockerfile    test8-docker-install-blue-green-proxy
+    │     │  URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall$Custom:Linux:BuildDockerfile::test8-docker-install-blue-green-proxy
+    │     ├─ command:remote:Command       test8-docker-install-blue-green-proxy-ensure-clean-dir
+    │     │     URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall$Custom:Linux:BuildDockerfile$command:remote:Command::test8-docker-install-blue-green-proxy-ensure-clean-dir
+    │     ├─ command:remote:Command       test8-docker-install-blue-green-proxy-create-secrets-mount
+    │     │     URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall$Custom:Linux:BuildDockerfile$command:remote:Command::test8-docker-install-blue-green-proxy-create-secrets-mount
+    │     ├─ command:remote:CopyToRemote  test8-docker-install-blue-green-proxy-copy-build-assets
+    │     │     URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall$Custom:Linux:BuildDockerfile$command:remote:CopyToRemote::test8-docker-install-blue-green-proxy-copy-build-assets
+    │     └─ command:remote:Command       test8-docker-install-blue-green-proxy-docker-up
+    │           URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall$Custom:Linux:BuildDockerfile$command:remote:Command::test8-docker-install-blue-green-proxy-docker-up
+    ├─ Custom:Linux:BuildDockerfile       test-server
+    │  │  URN: urn:pulumi:prod::iac-deploy::Custom:Linux:BuildDockerfile::test-server
+    │  ├─ command:remote:Command          test-server-ensure-clean-dir
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linux:BuildDockerfile$command:remote:Command::test-server-ensure-clean-dir
+    │  └─ command:remote:CopyToRemote     test-server-copy-build-assets
+    │        URN: urn:pulumi:prod::iac-deploy::Custom:Linux:BuildDockerfile$command:remote:CopyToRemote::test-server-copy-build-assets
+    ├─ Custom:Linux:BuildDockerfile       mysql-container
+    │  │  URN: urn:pulumi:prod::iac-deploy::Custom:Linux:BuildDockerfile::mysql-container
+    │  ├─ command:remote:Command          mysql-container-ensure-clean-dir
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linux:BuildDockerfile$command:remote:Command::mysql-container-ensure-clean-dir
+    │  ├─ command:remote:CopyToRemote     mysql-container-copy-build-assets
+    │  │     URN: urn:pulumi:prod::iac-deploy::Custom:Linux:BuildDockerfile$command:remote:CopyToRemote::mysql-container-copy-build-assets
+    │  └─ command:remote:Command          mysql-container-create-secrets-mount
+    │        URN: urn:pulumi:prod::iac-deploy::Custom:Linux:BuildDockerfile$command:remote:Command::mysql-container-create-secrets-mount
+    ├─ command:remote:Command             test3-docker-install-docker-install
+    │     URN: urn:pulumi:prod::iac-deploy::command:remote:Command::test3-docker-install-docker-install
+    ├─ Custom:Linux:DockerInstall         test3-docker-install
+    │  │  URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall::test3-docker-install
+    │  └─ command:remote:CopyToRemote     test3-docker-install-docker-release-plugin
+    │        URN: urn:pulumi:prod::iac-deploy::Custom:Linux:DockerInstall$command:remote:CopyToRemote::test3-docker-install-docker-release-plugin
+    ├─ pulumi:providers:std               default_2_2_0
+    │     URN: urn:pulumi:prod::iac-deploy::pulumi:providers:std::default_2_2_0
+    ├─ pulumi:providers:linode            default_4_39_0
+    │     URN: urn:pulumi:prod::iac-deploy::pulumi:providers:linode::default_4_39_0
+    ├─ pulumi:providers:command           default_1_0_5
+    │     URN: urn:pulumi:prod::iac-deploy::pulumi:providers:command::default_1_0_5
+    ├─ pulumi:providers:linode            default_4_38_0
+    │     URN: urn:pulumi:prod::iac-deploy::pulumi:providers:linode::default_4_38_0
+    └─ pulumi:providers:command           default_1_0_3
+          URN: urn:pulumi:prod::iac-deploy::pulumi:providers:command::default_1_0_3
+
+Current stack outputs (0):
+    No output values currently in this stack
+
+More information at: https://app.pulumi.com/hanseltime/iac-deploy/prod
+
+Use `pulumi stack select` to change stack; `pulumi stack ls` lists known ones

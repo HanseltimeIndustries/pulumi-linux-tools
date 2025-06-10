@@ -1,0 +1,4 @@
+{
+    "description": "This is a programmatically created file via get-esm-packages -p yarnv2+ -r --file esm-packages.json --quiet",
+    "packages": []
+}

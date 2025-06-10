@@ -1,0 +1,80 @@
+name: test
+services:
+  dockerproxy:
+    environment:
+      CONTAINERS: 1
+    image: tecnativa/docker-socket-proxy
+    networks:
+      - socketConnect
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  ssh-ubuntu:
+    build: 
+      context: ./test-assets
+    environment:
+      PASSWORD: /run/secrets/user_password
+    ports:
+      - 4022:22
+    secrets:
+      - user_password
+  huh:
+    image: traefik/whoami
+    command:
+      - --name=wowowow
+    user: "0:0"
+    ports:
+      - 8089:80
+    healthcheck:
+      test: "exit 0"
+  traefik:
+    depends_on: 
+      - dockerproxy
+    build:
+      context: ./traefik-test
+    ports: 
+     - 80:80
+    volumes:
+      - "./traefik-test/traefik.yaml:/traefik.yml"
+    networks:
+      - blueGreenNetwork
+      - socketConnect
+    healthcheck:
+      test: "wget --spider 127.0.0.1:8089/ping"
+  server-huh:
+    build: ./blue-green/aquamarine
+    # healthcheck:
+    #   test: "wget --spider 127.0.0.1:3000/"
+    user: "10001:10005"
+    secrets:
+      - secret1
+    ports:
+      - "8090:3000"
+    volumes:
+      - "./sumthing:/something"
+  server:
+    build: ./blue-green/aquamarine
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.app.entrypoints=web'
+      - 'traefik.http.routers.app.rule=PathPrefix(`/`)'
+      - 'traefik.http.services.app.loadbalancer.server.port=3000'
+      # - "traefik.http.routers.app.tls=true"
+    networks:
+      - blueGreenNetwork
+  certserver:
+    build: ./blue-green/aquamarine
+    networks:
+      - blueGreenNetwork
+
+secrets:
+  user_password:
+    environment: 'PWORD'
+  secret1:
+    environment: MY_SECRET
+
+networks:
+  blueGreenNetwork:
+    driver: "bridge"
+  socketConnect:
+    internal: true
+    driver: "bridge"

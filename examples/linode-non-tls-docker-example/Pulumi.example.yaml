@@ -1,0 +1,7 @@
+config:
+  linode-non-tls-example:sshPassword:
+    secure: AAABAEmhAGzQBcK4GObAr8HSYtzxjrJ78n0RPHRnIW5jtBtPwms=
+  linode-non-tls-example:rootPassword:
+    secure: AAABABRDOhSPxbxYkhPGmxBewNIgdugSlc97ySgK/V+jrBmlaoxZazwhiyaov4Ro
+  linode-non-tls-example:deploymentSSHKey: linde_non_tls_example_rsa.pub
+  linode-non-tls-example:linodeRegion: us-central
