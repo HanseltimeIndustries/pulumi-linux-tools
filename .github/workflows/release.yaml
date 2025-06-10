@@ -28,17 +28,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
-      - name: Get prerelease command
-        id: prerelease
-        run: |
-          if [ "$BRANCH_NAME" == "master" ]; then
-            echo 'precommand=if [ -f .changeset/pre.json ]; then yarn changeset pre exit; fi' >> $GITHUB_OUTPUT
-          elif [ "$BRANCH_NAME" == "alpha" ]; then
-            echo 'precommand=yarn changeset pre enter alpha' >> $GITHUB_OUTPUT
-          else
-            echo "Unknown branch name for release! $BRANCH_NAME"
-            exit 1
-          fi
       - name: Use Node.js 20.x
         uses: actions/setup-node@v3
         with:
@@ -62,9 +51,9 @@ jobs:
         uses: jamilomar/autopublish-changesets-action@4f9b15bd1f52a161e29f32ef42b712555d987f83
         with:
           # script to be used to publish the pr (changeset version by default)
-          versionScript: ${{ steps.prerelease.outputs.precommand }} && yarn changeset version && yarn format --fix
+          versionScript: ./bin/ci-version.sh
           # script to be used to publish the pr 
-          publishScript: changeset publish
+          publishScript: yarn changeset publish
           # commit message
           commitMessage: 'chore: publish changeset'
           # optional force, indicates if the github push should be forced
