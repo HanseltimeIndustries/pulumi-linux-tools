@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-linux-base",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Base functions as a shared component of other @hanseltime/pulumi-linux packages",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",

@@ -1,5 +1,11 @@
 # @hanseltime/pulumi-linux-base
 
+## 1.0.2
+
+### Patch Changes
+
+- 2fe936e: Forcing patch bump for initial change sets
+
 ## 1.0.1
 
 ### Patch Changes

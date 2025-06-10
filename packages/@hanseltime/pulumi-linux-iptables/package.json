@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-linux-iptables",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Programmatic API for declaring Iptables rules and using them with other hanseltimelinux resources",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",
