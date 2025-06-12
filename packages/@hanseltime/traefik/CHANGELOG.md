@@ -1,5 +1,11 @@
 # @hanseltime/traefik
 
+## 0.1.3
+
+### Patch Changes
+
+- c2140cb: Fixing changeset publishing issue for yarn based monorepos
+
 ## 0.1.2
 
 ### Patch Changes
