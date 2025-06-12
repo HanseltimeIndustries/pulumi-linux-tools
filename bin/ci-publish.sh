@@ -14,5 +14,8 @@
 #
 ##################################################################################
 
+echo "Calling workspaces foreach"
 yarn workspaces foreach --no-private --since npm publish --access public
+
+echo "Updating tags"
 yarn changeset tag
