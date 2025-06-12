@@ -53,7 +53,7 @@ jobs:
           # script to be used to publish the pr (changeset version by default)
           versionScript: ./bin/ci-version.sh
           # script to be used to publish the pr 
-          publishScript: yarn changeset publish
+          publishScript: ./bin/ci-publish.sh
           # commit message
           commitMessage: 'chore: publish changeset'
           # optional force, indicates if the github push should be forced
