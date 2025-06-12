@@ -1,5 +1,15 @@
 # @hanseltime/pulumi-linode
 
+## 0.1.4
+
+### Patch Changes
+
+- d301041: Fixing a changeset bug with yarn publishing
+- Updated dependencies [d301041]
+  - @hanseltime/pulumi-linux@1.0.4
+  - @hanseltime/pulumi-linux-base@1.0.4
+  - @hanseltime/pulumi-utils@1.0.4
+
 ## 0.1.3
 
 ### Patch Changes

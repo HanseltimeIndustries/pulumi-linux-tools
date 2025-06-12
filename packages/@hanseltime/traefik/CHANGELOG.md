@@ -1,5 +1,11 @@
 # @hanseltime/traefik
 
+## 0.1.4
+
+### Patch Changes
+
+- d301041: Fixing a changeset bug with yarn publishing
+
 ## 0.1.3
 
 ### Patch Changes

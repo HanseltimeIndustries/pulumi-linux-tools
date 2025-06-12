@@ -1,5 +1,13 @@
 # @hanseltime/pulumi-linux-iptables
 
+## 1.0.4
+
+### Patch Changes
+
+- d301041: Fixing a changeset bug with yarn publishing
+- Updated dependencies [d301041]
+  - @hanseltime/pulumi-linux-base@1.0.4
+
 ## 1.0.3
 
 ### Patch Changes

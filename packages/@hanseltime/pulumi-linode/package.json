@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-linode",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"description": "Higher level abstractions for Linode Resources that enforce visibility and better practices",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",

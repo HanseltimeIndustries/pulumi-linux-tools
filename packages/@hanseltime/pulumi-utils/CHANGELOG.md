@@ -1,5 +1,11 @@
 # @hanseltime/pulumi-utils
 
+## 1.0.4
+
+### Patch Changes
+
+- d301041: Fixing a changeset bug with yarn publishing
+
 ## 1.0.3
 
 ### Patch Changes
