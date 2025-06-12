@@ -53,17 +53,21 @@ jobs:
       - name: Apply Publishing
         run: | 
           # yarn workspaces foreach --no-private --since npm publish --access public
+          git config user.name "release-bot"
+          git config user.email "release-bot@email"
           yarn changeset tag
+          git tag
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create Publish Commit
         run: |
+          yarn changeset tag
+          git tag
           diffs=$(git diff --name-only | wc -l)
           if [ "$diffs" != "0" ]; then
-            git config user.name "release-bot"
-            git config user.email "release-bot@email"
             git add .
             git commit -m "chore: release packages [skip ci]"
+            git tag
             git push --follow-tags
           fi
       # - name: Autopublish Action
