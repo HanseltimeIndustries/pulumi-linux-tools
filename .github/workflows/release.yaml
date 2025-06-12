@@ -39,29 +39,49 @@ jobs:
           yarn install --immutable
       - name: Build
         run: yarn build
-      - name: Creating .npmrc
+      # - name: Creating .npmrc
+      #   run: |
+      #     cat << EOF > "$HOME/.npmrc"
+      #       //registry.npmjs.org/:_authToken=$NPM_TOKEN
+      #     EOF
+      #   env:
+      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Apply Changesets
         run: |
-          cat << EOF > "$HOME/.npmrc"
-            //registry.npmjs.org/:_authToken=$NPM_TOKEN
-          EOF
+          ./bin/ci-version.sh
+      # This is a workaround for yarn support issues
+      - name: Apply Publishing
+        run: | 
+          # yarn workspaces foreach --no-private --since npm publish --access public
+          yarn changeset tag
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Autopublish Action
-        id: changesets
-        uses: jamilomar/autopublish-changesets-action@4f9b15bd1f52a161e29f32ef42b712555d987f83
-        with:
-          # script to be used to publish the pr (changeset version by default)
-          versionScript: ./bin/ci-version.sh
-          # script to be used to publish the pr 
-          publishScript: ./bin/ci-publish.sh
-          # commit message
-          commitMessage: 'chore: publish changeset'
-          # optional force, indicates if the github push should be forced
-          force: false
-          # optional username , github user name
-          username: 'auto-release'
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create Publish Commit
+        run: |
+          diffs=$(git diff --name-only | wc -l)
+          if [ "$diffs" != "0" ]; then
+            git config user.name "release-bot"
+            git config user.email "release-bot@email"
+            git add .
+            git commit -m "chore: release packages [skip ci]"
+            git push --follow-tags
+          fi
+      # - name: Autopublish Action
+      #   id: changesets
+      #   uses: jamilomar/autopublish-changesets-action@4f9b15bd1f52a161e29f32ef42b712555d987f83
+      #   with:
+      #     # script to be used to publish the pr (changeset version by default)
+      #     versionScript: ./bin/ci-version.sh
+      #     # script to be used to publish the pr 
+      #     publishScript: ./bin/ci-publish.sh
+      #     # commit message
+      #     commitMessage: 'chore: publish changeset'
+      #     # optional force, indicates if the github push should be forced
+      #     force: false
+      #     # optional username , github user name
+      #     username: 'auto-release'
+      #   env:
+      #     GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
       # Note - we publish doc on non-release steps as well (i.e. a docs: commit)
       # So we need the last tagged version and to make sure we are on the latest commit (to avoid re-runs on old actions)
       # TODO - if we want to set up monorepo ghpages, we will add this
