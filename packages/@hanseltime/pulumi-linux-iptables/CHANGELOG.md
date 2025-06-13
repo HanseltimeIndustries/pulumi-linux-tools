@@ -1,5 +1,13 @@
 # @hanseltime/pulumi-linux-iptables
 
+## 1.0.5
+
+### Patch Changes
+
+- eeb0a82: Applying fixes to changesets
+- Updated dependencies [eeb0a82]
+  - @hanseltime/pulumi-linux-base@1.0.5
+
 ## 1.0.4
 
 ### Patch Changes

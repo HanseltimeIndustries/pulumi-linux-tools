@@ -1,5 +1,11 @@
 # @hanseltime/pulumi-linux-base
 
+## 1.0.5
+
+### Patch Changes
+
+- eeb0a82: Applying fixes to changesets
+
 ## 1.0.4
 
 ### Patch Changes

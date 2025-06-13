@@ -1,5 +1,11 @@
 # @hanseltime/traefik
 
+## 0.1.5
+
+### Patch Changes
+
+- eeb0a82: Applying fixes to changesets
+
 ## 0.1.4
 
 ### Patch Changes

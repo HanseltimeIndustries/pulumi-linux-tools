@@ -1,5 +1,15 @@
 # @hanseltime/pulumi-linode
 
+## 0.1.5
+
+### Patch Changes
+
+- eeb0a82: Applying fixes to changesets
+- Updated dependencies [eeb0a82]
+  - @hanseltime/pulumi-linux@1.0.5
+  - @hanseltime/pulumi-linux-base@1.0.5
+  - @hanseltime/pulumi-utils@1.0.5
+
 ## 0.1.4
 
 ### Patch Changes

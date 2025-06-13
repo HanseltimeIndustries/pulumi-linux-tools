@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/traefik",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Programmatic API for working with certain traefik configurations via typescript",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",
