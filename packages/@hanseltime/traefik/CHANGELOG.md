@@ -1,5 +1,11 @@
 # @hanseltime/traefik
 
+## 0.1.6
+
+### Patch Changes
+
+- 420e044: More problems with changesets
+
 ## 0.1.5
 
 ### Patch Changes

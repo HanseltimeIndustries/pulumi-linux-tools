@@ -1,5 +1,13 @@
 # @hanseltime/pulumi-linux
 
+## 1.0.6
+
+### Patch Changes
+
+- 420e044: More problems with changesets
+- Updated dependencies [420e044]
+  - @hanseltime/pulumi-linux-base@1.0.6
+
 ## 1.0.5
 
 ### Patch Changes
