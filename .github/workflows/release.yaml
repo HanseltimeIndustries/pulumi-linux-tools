@@ -57,8 +57,7 @@ jobs:
           if [ "$diffs" != "0" ]; then
             git add .
             git commit -m "chore: release packages [skip ci]"
-            git tag
-            git push --tags
+            git push --follow-tags
           fi
       # Note - we publish doc on non-release steps as well (i.e. a docs: commit)
       # So we need the last tagged version and to make sure we are on the latest commit (to avoid re-runs on old actions)
