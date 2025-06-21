@@ -1,4 +1,4 @@
-import * as pulumi from "@pulumi/pulumi";
+import type * as pulumi from "@pulumi/pulumi";
 
 // Local type helpers
 

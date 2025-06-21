@@ -37,12 +37,9 @@ jobs:
       - name: build
         run: |
           yarn build
-      - name: linting
+      - name: linting and formatting check
         run: |
-          yarn lint
-      - name: formatting
-        run: |
-          yarn format
+          yarn check
       - name: testing
         run: |
           echo "Skipping test runs since unit testing is not set up yet"

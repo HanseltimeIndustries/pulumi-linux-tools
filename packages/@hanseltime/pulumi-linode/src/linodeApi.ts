@@ -1,4 +1,8 @@
-import { ErrorResponse, LinodeInfoResponse, Paginated } from "./linode-types";
+import type {
+	ErrorResponse,
+	LinodeInfoResponse,
+	Paginated,
+} from "./linode-types";
 
 // linode seems to have a messy type system, I'm just gonna put it here
 

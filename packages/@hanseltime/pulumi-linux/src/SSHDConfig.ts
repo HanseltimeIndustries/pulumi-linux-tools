@@ -1,6 +1,7 @@
-import * as pulumi from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
 import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import type { types } from "@pulumi/command";
+import { remote } from "@pulumi/command";
+import type * as pulumi from "@pulumi/pulumi";
 
 /**
  * This construct will manage your SSHDConfig for you (it will overwrite manual changes.)

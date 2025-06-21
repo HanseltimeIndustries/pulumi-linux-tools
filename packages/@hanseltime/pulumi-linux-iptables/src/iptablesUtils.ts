@@ -1,4 +1,4 @@
-import {
+import type {
 	InvertableIpV4TablesProps,
 	InvertableIpV6TablesProps,
 	IPFamily,

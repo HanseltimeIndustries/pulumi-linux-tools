@@ -1,29 +1,28 @@
-import * as pulumi from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
-import { resolve } from "path";
-import { dump } from "js-yaml";
-import {
-	DockerDaemonJson,
-	DockerDeployType,
-	TempCopyDirArgs,
-	WaitOnChildren,
-} from "./types";
-import { ASSET_PATH, LIBRARY_PREFIX } from "./constants";
-import {
-	BuildDockerfileV2Args,
-	DockerComposeService,
-} from "./DockerComposeService";
+import type { v3 } from "@hanseltime/compose-types";
 import { CopyableAsset } from "@hanseltime/pulumi-file-utils";
-import { StaticConfiguration } from "@hanseltime/traefik";
-import { v3 } from "@hanseltime/compose-types";
-import {
-	IpTablesChain,
+import { SudoCopyToRemote } from "@hanseltime/pulumi-linux";
+import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import type {
 	IpV4TablesRule,
 	IpV6TablesRule,
 } from "@hanseltime/pulumi-linux-iptables";
-import { Inputify } from "./helperTypes";
-import { shellStrings } from "@hanseltime/pulumi-linux-base";
-import { SudoCopyToRemote } from "@hanseltime/pulumi-linux";
+import { IpTablesChain } from "@hanseltime/pulumi-linux-iptables";
+import type { StaticConfiguration } from "@hanseltime/traefik";
+import type { types } from "@pulumi/command";
+import { remote } from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import { dump } from "js-yaml";
+import { resolve } from "path";
+import { ASSET_PATH, LIBRARY_PREFIX } from "./constants";
+import type { DockerComposeServiceArgs } from "./DockerComposeService";
+import { DockerComposeService } from "./DockerComposeService";
+import type { Inputify } from "./helperTypes";
+import type {
+	DockerDaemonJson,
+	TempCopyDirArgs,
+	WaitOnChildren,
+} from "./types";
+import { DockerDeployType } from "./types";
 
 export type CIDR = string;
 
@@ -44,7 +43,7 @@ export class DefaultInternalNetworkRange {
 	 * Returns a /24 CIDR 256 IPs incremented up from the base 172.255.0.0
 	 */
 	static get_24CIDR(n: number) {
-		const range = [...this.BASE_IP_ARR];
+		const range = [...DefaultInternalNetworkRange.BASE_IP_ARR];
 		range[2] = range[2] + n;
 		return `${range.join(".")}/24`;
 	}
@@ -107,8 +106,8 @@ interface DockerInstallArgs extends TempCopyDirArgs {
 				 * The static configuration for traefik that will be mounted into the Dockerfile
 				 */
 				staticConfig: pulumi.Input<StaticConfiguration>;
-				mounts?: BuildDockerfileV2Args["mounts"];
-				secrets?: BuildDockerfileV2Args["secrets"];
+				mounts?: DockerComposeServiceArgs["mounts"];
+				secrets?: DockerComposeServiceArgs["secrets"];
 		  };
 	/**
 	 * If you need to reupload assets for this installation, you can change the reuploadId to a new number
@@ -379,7 +378,7 @@ export class DockerInstall
 				// Pulled from https://www.linode.com/community/questions/21095/how-to-add-an-ssh-key-to-an-existing-linode
 				create: shellStrings.asSudoOutput(
 					setupNamespace.apply(
-						(setupNamespace) => `${setupNamespace} && ${installCommand}`,
+						(setupNamespaceIn) => `${setupNamespaceIn} && ${installCommand}`,
 					),
 				),
 				delete: shellStrings.asSudoOutput(
@@ -466,8 +465,8 @@ export class DockerInstall
 				connection: args.connection,
 				create: shellStrings.asSudoOutput(
 					rootDockerRemotePath.apply(
-						(rootDockerRemotePath) =>
-							`chmod +x ${rootDockerRemotePath}/cli-plugins/*`,
+						(rootDockerRemotePathIn) =>
+							`chmod +x ${rootDockerRemotePathIn}/cli-plugins/*`,
 					),
 				),
 				triggers: [dockerPlugins.copyableSource, args.reuploadId],
@@ -545,12 +544,12 @@ export class DockerInstall
 			const { portsToExpose, pingPort } = mergedStaticConfig.apply(
 				(staticConfig) => {
 					const pingConfig = staticConfig.ping;
-					let pingPort = "8080";
+					let pingPortRet = "8080";
 					if (pingConfig.entryPoint) {
 						const address =
 							staticConfig.entryPoints[pingConfig.entryPoint].address;
 						const [_, portProtocol] = address.split(":");
-						pingPort = portProtocol.split("/")[0];
+						pingPortRet = portProtocol.split("/")[0];
 					}
 					const portSet = new Set<string>();
 					Object.keys(staticConfig.entryPoints).forEach((ePoint) => {
@@ -565,18 +564,18 @@ export class DockerInstall
 					});
 					return {
 						portsToExpose: Array.from(portSet),
-						pingPort,
+						pingPort: pingPortRet,
 					};
 				},
 			);
 			const mounts = pulumi
 				.output({
-					mergedStaticConfig,
-					mounts: args.blueGreen.mounts,
+					mergedStaticConfigIn: mergedStaticConfig,
+					mountsIn: args.blueGreen.mounts,
 				})
-				.apply(({ mergedStaticConfig, mounts }) => {
+				.apply(({ mergedStaticConfigIn, mountsIn }) => {
 					const staticAsset = new pulumi.asset.StringAsset(
-						dump(mergedStaticConfig),
+						dump(mergedStaticConfigIn),
 					);
 
 					return [
@@ -585,7 +584,7 @@ export class DockerInstall
 							resource: staticAsset,
 							onContainer: "/traefik.yml",
 						},
-						...(mounts ?? []),
+						...(mountsIn ?? []),
 					];
 				});
 

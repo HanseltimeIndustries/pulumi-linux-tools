@@ -1,10 +1,10 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as command from "@pulumi/command";
-import { IpSetResource } from "./IpSetResource";
-import { IpTablesChain } from "./IpTablesChain";
-import { IpTablesChainCreate } from "./IpTablesChainCreate";
-import { LIBRARY_PREFIX } from "./constants";
 import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import * as command from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import { LIBRARY_PREFIX } from "./constants";
+import type { IpSetResource } from "./IpSetResource";
+import type { IpTablesChain } from "./IpTablesChain";
+import type { IpTablesChainCreate } from "./IpTablesChainCreate";
 
 export interface IpTablesSaveArgs {
 	connection: pulumi.Input<command.types.input.remote.ConnectionArgs>;

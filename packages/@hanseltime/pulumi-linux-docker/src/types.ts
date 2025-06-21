@@ -1,4 +1,4 @@
-import * as pulumi from "@pulumi/pulumi";
+import type * as pulumi from "@pulumi/pulumi";
 
 /**
  * If a resource is doing copy operations, some of them require the asset to be in

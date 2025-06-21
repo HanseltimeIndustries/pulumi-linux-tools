@@ -1,5 +1,5 @@
 import { createPortArgValue } from "./iptablesUtils";
-import { IpV4TablesRule, IpV6TablesRule } from "./types";
+import type { IpV4TablesRule, IpV6TablesRule } from "./types";
 
 /**
  * Helper class with static methods for tweaking IpTables Objects
@@ -25,9 +25,11 @@ export class IpTablesHelper {
 			| (IpV4TablesRule | IpV6TablesRule)[],
 	>(rule: T): T {
 		if (Array.isArray(rule)) {
-			return rule.map((r) => this._convertDestPortsToConnTrack(r)) as T;
+			return rule.map((r) =>
+				IpTablesHelper._convertDestPortsToConnTrack(r),
+			) as T;
 		}
-		return this._convertDestPortsToConnTrack(rule) as T;
+		return IpTablesHelper._convertDestPortsToConnTrack(rule) as T;
 	}
 	private static _convertDestPortsToConnTrack(
 		rule: IpV4TablesRule | IpV6TablesRule,
@@ -85,9 +87,9 @@ export class IpTablesHelper {
 			| (IpV4TablesRule | IpV6TablesRule)[],
 	>(rule: T): T {
 		if (Array.isArray(rule)) {
-			return rule.map((r) => this._convertDestIPsToConnTrack(r)) as T;
+			return rule.map((r) => IpTablesHelper._convertDestIPsToConnTrack(r)) as T;
 		}
-		return this._convertDestIPsToConnTrack(rule) as T;
+		return IpTablesHelper._convertDestIPsToConnTrack(rule) as T;
 	}
 	static _convertDestIPsToConnTrack(
 		rule: IpV4TablesRule | IpV6TablesRule,
@@ -144,8 +146,8 @@ export class IpTablesHelper {
 			| IpV6TablesRule
 			| (IpV4TablesRule | IpV6TablesRule)[],
 	>(rule: T): T {
-		return this.convertDestPortsToConnTrack(
-			this.convertDestIPsToConnTrack(rule),
+		return IpTablesHelper.convertDestPortsToConnTrack(
+			IpTablesHelper.convertDestIPsToConnTrack(rule),
 		);
 	}
 }

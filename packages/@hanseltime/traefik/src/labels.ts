@@ -1,4 +1,5 @@
-import { BuiltRules, Condition, RuleCond, RuleType } from "./types";
+import type { BuiltRules, Condition } from "./types";
+import { RuleCond, RuleType } from "./types";
 
 /**
  * Creates an http routing rule for label based providers like docker compose

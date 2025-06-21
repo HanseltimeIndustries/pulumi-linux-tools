@@ -1,4 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
+
 type PulumiResource<T = any> = new (
 	name: string,
 	inputs: pulumi.Inputs,
@@ -146,7 +147,7 @@ export class OutputDependency<
 				: dependencies;
 
 			// that calls the parent constructor with itself as scope
-			cls.apply(this as any, [
+			cls.apply(OutputDependency as any, [
 				name,
 				inputs,
 				{
