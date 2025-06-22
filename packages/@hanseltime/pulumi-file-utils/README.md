@@ -80,3 +80,39 @@ find it hard to know how many layers of parents deep you are.
 
 We provide a `CopyableAsset.fromParent` method that will compute a folder location that uses all parents of the provided
 parent, so that it's unique.
+
+### createChangeDetect
+
+Since this is creating temporary directories for upload, you will probably find yourself needing to
+compare to see if the directory has changed.  We don't want false positives because the timestamps
+on the new temporary directory are different or because whatever resource you're using does a comparison
+wrong (e.g. `remote.Command() triggers`).
+
+Because of this, every `CopyableAsset` has a `createChangeDetect` method that will create a temporary
+tar of the resource and return its buffer as a a value to compare.  The use of `tar/compression` is 
+because that does not have any collisions.  In the event of a very large file asset though, you may be
+more okay with hashing the binary.
+
+#### About secrets
+
+Since your copyable asset could involve secret values in files that you don't want to show, we always
+make the returned changeDetect value a secret.  Since this is just binary data anyway, there's no
+real need for it to be human readable and additionally, were we to print those via pulumi cli calls,
+you could technically untar everything and get all the files.  Thus, we make sure pulumi won't print them
+and just internally compare them.
+
+#### Hashing
+
+You may have a very large asset that you are creating.  As you can imagine, if you compress the that
+archive, you could still end up with a very large commpressed set of bytes anyway.  In this scenario, you
+can supply a hash function via `CopyableAsset.setChangeDetectHashFunction()`.  This way you can perform something 
+like a `SHA1` or `SHA256` of the bytes of the compressed asset and get a smaller comparison vector.
+Keep in mind that computing SHAs like this does not guarantee there won't be collisions which would
+lead to something looking like it hasn't changed. Since you tune the function though, you can continue
+to update your hash function as necessary in the event that occurs.
+
+We do provide a simple `sha256AndLength` hash function that will create a string of sha256 and the lenght of the buffer.  Again, this is meant to minimize collisions but cannot guarantee them.
+
+```typescript
+CopyableAsset.setChangeDetectHashFunction(CopyableAsset.sha256AndLength)
+```

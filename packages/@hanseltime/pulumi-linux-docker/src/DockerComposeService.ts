@@ -1,29 +1,31 @@
-import * as pulumi from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
-import { v3 } from "@hanseltime/compose-types";
-import { dump } from "js-yaml";
-import { DockerDeployType, TempCopyDirArgs, WaitOnChildren } from "./types";
-import { LIBRARY_PREFIX } from "./constants";
+import type { v3 } from "@hanseltime/compose-types";
+import { CopyableAsset, isPathAsset } from "@hanseltime/pulumi-file-utils";
+import type { PermissionObject } from "@hanseltime/pulumi-linux-base";
 import {
+	ACLPermissions,
+	StrictACL,
+	shellStrings,
+} from "@hanseltime/pulumi-linux-base";
+import type {
 	BuiltRules,
 	Condition,
-	createHttpRouteRuleLabel,
 	HttpHealthCheck,
 	TLSConfig,
 } from "@hanseltime/traefik";
-import { dockerDownCommand, dockerUpCommand } from "./shell";
-import {
-	ACLPermissions,
-	PermissionObject,
-	shellStrings,
-	StrictACL,
-} from "@hanseltime/pulumi-linux-base";
+import { createHttpRouteRuleLabel } from "@hanseltime/traefik";
+import type { types } from "@pulumi/command";
+import { remote } from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
 import { AssetArchive } from "@pulumi/pulumi/asset";
-import { CopyableAsset, isPathAsset } from "@hanseltime/pulumi-file-utils";
 import { dot } from "dot-object";
-import { PropsInputify, Inputify } from "./helperTypes";
-import { basename } from "path";
 import { readdir } from "fs/promises";
+import { dump } from "js-yaml";
+import { basename } from "path";
+import { LIBRARY_PREFIX } from "./constants";
+import type { Inputify, PropsInputify } from "./helperTypes";
+import { dockerDownCommand, dockerUpCommand } from "./shell";
+import type { TempCopyDirArgs, WaitOnChildren } from "./types";
+import { DockerDeployType } from "./types";
 
 type NoShortForm<T> = T extends string
 	? never
@@ -118,7 +120,7 @@ type ServiceInputified = PropsInputify<
 			| "ROOT_USER";
 	};
 
-export interface BuildDockerfileV2Args extends TempCopyDirArgs {
+export interface DockerComposeServiceArgs extends TempCopyDirArgs {
 	/**
 	 * The name of the service - must be unique on the machine
 	 */
@@ -326,7 +328,7 @@ export class DockerComposeService
 	last: pulumi.Input<pulumi.Resource>;
 	constructor(
 		name: string,
-		args: BuildDockerfileV2Args,
+		args: DockerComposeServiceArgs,
 		opts?: pulumi.ComponentResourceOptions,
 	) {
 		super(`${LIBRARY_PREFIX}:BuildDockerfile`, name, args, opts);
@@ -347,61 +349,61 @@ export class DockerComposeService
 
 		const serviceFolder = pulumi
 			.output({
-				homeDir,
-				serviceName,
+				homeDirIn: homeDir,
+				serviceNameIn: serviceName,
 			})
-			.apply(({ homeDir, serviceName }) => {
-				return `${homeDir}/docker/${serviceName}`;
+			.apply(({ homeDirIn, serviceNameIn }) => {
+				return `${homeDirIn}/docker/${serviceNameIn}`;
 			});
 		const buildContextPath = serviceFolder.apply(
-			(serviceFolder) => `${serviceFolder}/${BUILD_FOLDER}`,
+			(serviceFolderIn) => `${serviceFolderIn}/${BUILD_FOLDER}`,
 		);
 		const composeFilePath = serviceFolder.apply(
-			(serviceFolder) => `${serviceFolder}/${COMPOSE_FILE}`,
+			(serviceFolderIn) => `${serviceFolderIn}/${COMPOSE_FILE}`,
 		);
 		const secretMountDir = pulumi
 			.output(serviceName)
-			.apply((serviceName) => `/var/pulumi-docker/.secrets/${serviceName}`);
+			.apply((serviceNameIn) => `/var/pulumi-docker/.secrets/${serviceNameIn}`);
 		// Create Compose
 		const composeSpec = pulumi
 			.output({
-				service,
-				secrets,
-				secretMountDir,
-				serviceName,
-				buildContextPath,
-				networks,
-				deployType,
-				blueGreen,
-				mounts,
-				accessDockerSocket,
+				serviceIn: service,
+				secretsIn: secrets,
+				secretMountDirIn: secretMountDir,
+				serviceNameIn: serviceName,
+				buildContextPathIn: buildContextPath,
+				networksIn: networks,
+				deployTypeIn: deployType,
+				blueGreenIn: blueGreen,
+				mountsIn: mounts,
+				accessDockerSocketIn: accessDockerSocket,
 			})
 			.apply(
 				({
-					serviceName,
-					secrets,
-					secretMountDir,
-					service,
-					buildContextPath,
-					networks = {},
-					deployType,
-					blueGreen,
-					mounts,
-					accessDockerSocket,
+					serviceNameIn,
+					secretsIn,
+					secretMountDirIn,
+					serviceIn,
+					buildContextPathIn,
+					networksIn = {},
+					deployTypeIn,
+					blueGreenIn,
+					mountsIn,
+					accessDockerSocketIn,
 				}) => {
-					if (deployType !== DockerDeployType.BlueGreen && blueGreen) {
+					if (deployTypeIn !== DockerDeployType.BlueGreen && blueGreenIn) {
 						throw new pulumi.InputPropertyError({
 							propertyPath: "blueGreen",
-							reason: `blueGreen settings should only be supplied for BlueGreen deployment type. (docker compose service: ${serviceName})`,
+							reason: `blueGreen settings should only be supplied for BlueGreen deployment type. (docker compose service: ${serviceNameIn})`,
 						});
 					}
 
 					const user =
-						service.user === "ROOT_USER"
+						serviceIn.user === "ROOT_USER"
 							? "0:0"
-							: `${service.user.userId}:${service.user.groupId}`;
-					const buildCast = service.build as NoShortForm<v3.Service["build"]>;
-					const volumeCast = (service.volumes as string[]) ?? [];
+							: `${serviceIn.user.userId}:${serviceIn.user.groupId}`;
+					const buildCast = serviceIn.build as NoShortForm<v3.Service["build"]>;
+					const volumeCast = (serviceIn.volumes as string[]) ?? [];
 					let dependsOnFull: {
 						[s: string]: {
 							restart?: boolean | string;
@@ -413,8 +415,8 @@ export class DockerComposeService
 						};
 					};
 					// Convert any dependsOnCast to the explicit format
-					if (Array.isArray(service.depends_on)) {
-						dependsOnFull = service.depends_on.reduce(
+					if (Array.isArray(serviceIn.depends_on)) {
+						dependsOnFull = serviceIn.depends_on.reduce(
 							(full, dep) => {
 								full[dep] = {
 									restart: false,
@@ -434,9 +436,9 @@ export class DockerComposeService
 								};
 							},
 						);
-					} else if (service.depends_on) {
+					} else if (serviceIn.depends_on) {
 						dependsOnFull = {
-							...(service.depends_on as {
+							...(serviceIn.depends_on as {
 								[s: string]: {
 									restart?: boolean | string;
 									required?: boolean;
@@ -451,8 +453,8 @@ export class DockerComposeService
 						dependsOnFull = {};
 					}
 
-					const socketServiceOptions = accessDockerSocket
-						? this.getSocketServiceSidecarOptions(accessDockerSocket)
+					const socketServiceOptions = accessDockerSocketIn
+						? this.getSocketServiceSidecarOptions(accessDockerSocketIn)
 						: {
 								socketSideCarService: {},
 								socketNetworks: {},
@@ -467,39 +469,39 @@ export class DockerComposeService
 						};
 					}
 
-					const sNetworks: v3.Service["networks"] = service.networks
-						? (service.networks as v3.Service["networks"])
-						: deployType === DockerDeployType.BlueGreen
+					const sNetworks: v3.Service["networks"] = serviceIn.networks
+						? (serviceIn.networks as v3.Service["networks"])
+						: deployTypeIn === DockerDeployType.BlueGreen
 							? []
 							: socketServiceOptions.socketNetworkName
 								? []
 								: undefined;
-					const labels = (service.labels ?? []) as NonNullable<
+					const labels = (serviceIn.labels ?? []) as NonNullable<
 						v3.Service["labels"]
 					>;
 
 					if (sNetworks && socketServiceOptions.socketNetworkName) {
 						this.addNetwork(sNetworks, socketServiceOptions.socketNetworkName);
 						Object.keys(socketServiceOptions.socketNetworks).forEach((n) => {
-							networks[n] = (socketServiceOptions.socketNetworks as any)[n];
+							networksIn[n] = (socketServiceOptions.socketNetworks as any)[n];
 						});
 					}
 
-					if (deployType === DockerDeployType.BlueGreen) {
-						if (!blueGreen) {
+					if (deployTypeIn === DockerDeployType.BlueGreen) {
+						if (!blueGreenIn) {
 							throw new Error(
 								`Must supply blueGreen property for deployType: blue-green`,
 							);
 						}
-						if (service.ports && service.ports.length > 0) {
+						if (serviceIn.ports && serviceIn.ports.length > 0) {
 							throw new Error(
-								`You cannot explicitly map ports for blue-green since there will be multiple copies requiring the same port (${JSON.stringify(service.ports)})`,
+								`You cannot explicitly map ports for blue-green since there will be multiple copies requiring the same port (${JSON.stringify(serviceIn.ports)})`,
 							);
 						}
 						// TODO - rollout doesn't require traefik if something is isolated
-						const traefikLabels = blueGreen.ports.reduce(
+						const traefikLabels = blueGreenIn.ports.reduce(
 							(_lbls, p) => {
-								const routeService = `bluegreen${serviceName}${p.entrypoint}`;
+								const routeService = `bluegreen${serviceNameIn}${p.entrypoint}`;
 								const routerPrefix = `traefik.http.routers.${routeService}`;
 								const lbPrefix = `traefik.http.services.${routeService}.loadbalancer`;
 								// If this is tls add configurations as such
@@ -539,8 +541,8 @@ export class DockerComposeService
 							});
 						}
 
-						networks[BLUE_GREEN_NETWORK] = {
-							name: blueGreen.networkName,
+						networksIn[BLUE_GREEN_NETWORK] = {
+							name: blueGreenIn.networkName,
 							external: true,
 						};
 					}
@@ -550,14 +552,14 @@ export class DockerComposeService
 							? sNetworks
 							: Object.keys(sNetworks);
 						networkNames.forEach((netName) => {
-							if (!networks[netName]) {
+							if (!networksIn[netName]) {
 								throw new Error(
 									`Attempting to use a network that is not declared in networks! ${netName}`,
 								);
 							}
 						});
 
-						if (deployType === DockerDeployType.BlueGreen) {
+						if (deployTypeIn === DockerDeployType.BlueGreen) {
 							this.addNetwork(sNetworks, BLUE_GREEN_NETWORK);
 						}
 					}
@@ -576,7 +578,7 @@ export class DockerComposeService
 							} else {
 								// Check relative paths to make sure they match the mounts
 								if (!onhost.startsWith("/")) {
-									const matchesMount = mounts?.some((m) => {
+									const matchesMount = mountsIn?.some((m) => {
 										if (onhost === `./${this.getMountRelPath(m)}`) {
 											return true;
 										}
@@ -598,17 +600,17 @@ export class DockerComposeService
 					const mappedVolumes = Array.from(
 						new Set([
 							...volumeCast,
-							...(mounts?.map((mnt) => {
+							...(mountsIn?.map((mnt) => {
 								return `./${this.getMountRelPath(mnt)}:${mnt.onContainer}:${mnt.readWrite ? "rw" : "ro"}`;
 							}) ?? []),
 						]),
 					);
 
 					// Verify that there are no unused mounts or duplicate named mounts
-					if (mounts) {
+					if (mountsIn) {
 						const uniq = new Set<string>();
 						const dup = new Set<string>();
-						mounts.forEach((m) => {
+						mountsIn.forEach((m) => {
 							if (!uniq.has(m.name)) {
 								uniq.add(m.name);
 							} else {
@@ -632,9 +634,11 @@ export class DockerComposeService
 					}
 					// Coerce pids limit to avoid any fork bombs
 					// 5.28 Ensure PIDs cgroup limit is used
-					const topPidsLimit = service.pids_limit;
+					const topPidsLimit = serviceIn.pids_limit;
 					const innerPidsLimit = (
-						service.deploy?.resources as v3.Deployment["resources"] | undefined
+						serviceIn.deploy?.resources as
+							| v3.Deployment["resources"]
+							| undefined
 					)?.limits?.pids;
 					let pids_limit: string | number = 200;
 					if (topPidsLimit !== undefined || innerPidsLimit !== undefined) {
@@ -650,32 +654,32 @@ export class DockerComposeService
 						pids_limit = topPidsLimit! ?? innerPidsLimit!;
 					} else {
 						console.warn(
-							`${serviceName} does not have pids_limit set.  Defaulting to ${pids_limit}`,
+							`${serviceNameIn} does not have pids_limit set.  Defaulting to ${pids_limit}`,
 						);
 					}
 
 					const composeFile: v3.ComposeSpecification = {
-						name: serviceName,
+						name: serviceNameIn,
 						services: {
 							// Add the sidecare if it exists
 							...socketServiceOptions.socketSideCarService,
-							[serviceName]: {
-								...(service as v3.Service),
+							[serviceNameIn]: {
+								...(serviceIn as v3.Service),
 								healthcheck:
-									service.healthcheck === "NO_SHELL"
+									serviceIn.healthcheck === "NO_SHELL"
 										? undefined
-										: (service.healthcheck as v3.Healthcheck),
+										: (serviceIn.healthcheck as v3.Healthcheck),
 								// TODO - this negates pure image based setup - we'll want to change that
 								...(buildCast
 									? {
 											build: {
 												...buildCast,
-												context: buildContextPath,
+												context: buildContextPathIn,
 											},
 										}
 									: {}),
 								labels,
-								secrets: secrets?.map((s) => s.name),
+								secrets: secretsIn?.map((s) => s.name),
 								networks: sNetworks,
 								volumes: mappedVolumes,
 								pids_limit,
@@ -685,17 +689,17 @@ export class DockerComposeService
 							},
 						},
 						volumes: topLevelVolumes,
-						secrets: secrets?.reduce(
+						secrets: secretsIn?.reduce(
 							(map, secret) => {
 								map[secret.name] = {
-									file: `${secretMountDir}/${secret.name}`,
+									file: `${secretMountDirIn}/${secret.name}`,
 								};
 								return map;
 							},
 							{} as { [k: string]: { file: string } },
 						),
 						networks: {
-							...(networks as {
+							...(networksIn as {
 								[n: string]: v3.Network;
 							}),
 							...socketServiceOptions.socketNetworks,
@@ -710,32 +714,37 @@ export class DockerComposeService
 			removeMountAcls: pulumi.Output<string> | undefined;
 		if (mounts) {
 			({ setMountAcls, insertMountAcls, removeMountAcls } = pulumi
-				.output({ service, mounts, serviceFolder, usernsRemap })
-				.apply(({ mounts, service, serviceFolder, usernsRemap }) => {
+				.output({
+					serviceIn: service,
+					mountsIn: mounts,
+					serviceFolderIn: serviceFolder,
+					usernsRemapIn: usernsRemap,
+				})
+				.apply(({ mountsIn, serviceIn, serviceFolderIn, usernsRemapIn }) => {
 					const userId =
-						(service.user === "ROOT_USER" ? 0 : service.user.userId) +
-						usernsRemap.start;
+						(serviceIn.user === "ROOT_USER" ? 0 : serviceIn.user.userId) +
+						usernsRemapIn.start;
 					const groupId =
-						(service.user === "ROOT_USER" ? 0 : service.user.groupId) +
-						usernsRemap.start;
+						(serviceIn.user === "ROOT_USER" ? 0 : serviceIn.user.groupId) +
+						usernsRemapIn.start;
 					if (
-						usernsRemap.length !== 0 &&
-						userId > usernsRemap.start + usernsRemap.length
+						usernsRemapIn.length !== 0 &&
+						userId > usernsRemapIn.start + usernsRemapIn.length
 					) {
 						throw new Error(
-							`User id: ${userId} is larger than the allotted user namespace ${usernsRemap.start}:${usernsRemap.length}`,
+							`User id: ${userId} is larger than the allotted user namespace ${usernsRemapIn.start}:${usernsRemapIn.length}`,
 						);
 					}
 					if (
-						usernsRemap.length !== 0 &&
-						groupId > usernsRemap.start + usernsRemap.length
+						usernsRemapIn.length !== 0 &&
+						groupId > usernsRemapIn.start + usernsRemapIn.length
 					) {
 						throw new Error(
-							`Group id: ${groupId} is larger than the allotted user namespace ${usernsRemap.start}:${usernsRemap.length}`,
+							`Group id: ${groupId} is larger than the allotted user namespace ${usernsRemapIn.start}:${usernsRemapIn.length}`,
 						);
 					}
 
-					const acls = mounts.map((mnt) => {
+					const acls = mountsIn.map((mnt) => {
 						const dedup = new Set<string>();
 						const permissions = mnt.readWrite
 							? [
@@ -780,7 +789,7 @@ export class DockerComposeService
 							return false;
 						});
 						const acl = new StrictACL(
-							`${serviceFolder}/${this.getMountRelPath(mnt)}`,
+							`${serviceFolderIn}/${this.getMountRelPath(mnt)}`,
 							permObjects,
 						);
 
@@ -798,9 +807,9 @@ export class DockerComposeService
 				}));
 			mntArchive = new AssetArchive(
 				new Promise((res) => {
-					pulumi.output(mounts).apply((mounts) => {
+					pulumi.output(mounts).apply((mountsIn) => {
 						res(
-							mounts.reduce(
+							mountsIn.reduce(
 								(map, mount) => {
 									map[mount.name] = mount.resource;
 									return map;
@@ -814,22 +823,20 @@ export class DockerComposeService
 				}),
 			);
 		}
-		const { serviceBundle, dockerUpTriggers } = pulumi
+		const { serviceBundle } = pulumi
 			.output({
-				service,
-				composeSpec,
+				serviceIn: service,
+				composeSpecIn: composeSpec,
 			})
-			.apply(({ service, composeSpec }) => {
-				const buildContext = service.build?.context;
-				const composeStr = new pulumi.asset.StringAsset(dump(composeSpec));
+			.apply(({ serviceIn, composeSpecIn }) => {
+				const buildContext = serviceIn.build?.context;
+				const composeStr = new pulumi.asset.StringAsset(dump(composeSpecIn));
 				return {
 					serviceBundle: new pulumi.asset.AssetArchive({
 						[COMPOSE_FILE]: composeStr,
 						...(buildContext ? { [BUILD_FOLDER]: buildContext } : {}),
 						...(mntArchive ? { [MOUNT_FOLDER]: mntArchive } : {}),
 					}),
-					// mounts should not trigger redeploys unless there's a new mount which will be in composeSpec
-					dockerUpTriggers: [buildContext, composeStr],
 				};
 			});
 
@@ -840,11 +847,18 @@ export class DockerComposeService
 			noClean: false,
 		});
 
+		// Mounts should not trigger redeploys
+		const dockerUpTriggers = [
+			composeSpec,
+			safeAsset.createChangeDetect("build", true),
+			args.reuploadId,
+		];
+
 		// clear the build directory for the new files and move it to the .prev folder
 		const { onCreateOrUpdateAssetDirectories, onFullDeleteAssetDirectories } =
-			pulumi.output(serviceName).apply((name) => {
+			pulumi.output(serviceName).apply((nameIn) => {
 				const dockerDir = "$HOME/docker";
-				const current = `${dockerDir}/${name}`;
+				const current = `${dockerDir}/${nameIn}`;
 				const previous = `${current}.prev`;
 				return {
 					onCreateOrUpdateAssetDirectories: `mkdir -p ${current} && ${shellStrings.deleteDirElements(previous)} && ${shellStrings.moveDirElements(current, previous, [MOUNT_FOLDER])} && ${shellStrings.deleteDirElements(current)}`,
@@ -856,12 +870,7 @@ export class DockerComposeService
 			{
 				connection,
 				create: shellStrings.asSudoOutput(onCreateOrUpdateAssetDirectories),
-				triggers: [
-					// Anything that would require a rebuild/reload should rebuild the directory
-					composeSpec,
-					service.build?.context,
-					args.reuploadId,
-				],
+				triggers: pulumi.output(dockerUpTriggers).apply((triggers) => triggers),
 			},
 			{
 				parent: this,
@@ -877,33 +886,45 @@ export class DockerComposeService
 		if (secrets) {
 			({ setSecretMountAcls, insertSecretMountAcls, removeSecretMountAcls } =
 				pulumi
-					.output({ service, secretMountDir, secretUserIds, usernsRemap })
-					.apply(({ service, secretMountDir, secretUserIds, usernsRemap }) => {
-						const userIds = (secretUserIds as number[]) ?? [
-							(service.user === "ROOT_USER" ? 0 : service.user.userId) +
-								usernsRemap.start,
-						];
-						const acl = new StrictACL(
-							secretMountDir,
-							userIds.map((uid) => {
-								return {
-									id: uid,
-									// TODO - add write volumes
-									permissions: [
-										ACLPermissions.ExecuteOnlyOnDir,
-										ACLPermissions.Read,
-									],
-									type: "user",
-								} as PermissionObject;
-							}),
-						);
+					.output({
+						serviceIn: service,
+						secretMountDirIn: secretMountDir,
+						secretUserIdsIn: secretUserIds,
+						usernsRemapIn: usernsRemap,
+					})
+					.apply(
+						({
+							serviceIn,
+							secretMountDirIn,
+							secretUserIdsIn,
+							usernsRemapIn,
+						}) => {
+							const userIds = (secretUserIdsIn as number[]) ?? [
+								(serviceIn.user === "ROOT_USER" ? 0 : serviceIn.user.userId) +
+									usernsRemapIn.start,
+							];
+							const acl = new StrictACL(
+								secretMountDirIn,
+								userIds.map((uid) => {
+									return {
+										id: uid,
+										// TODO - add write volumes
+										permissions: [
+											ACLPermissions.ExecuteOnlyOnDir,
+											ACLPermissions.Read,
+										],
+										type: "user",
+									} as PermissionObject;
+								}),
+							);
 
-						return {
-							insertSecretMountAcls: acl.insertCommand(),
-							setSecretMountAcls: acl.setCommand(),
-							removeSecretMountAcls: acl.removeCommand(),
-						};
-					}));
+							return {
+								insertSecretMountAcls: acl.insertCommand(),
+								setSecretMountAcls: acl.setCommand(),
+								removeSecretMountAcls: acl.removeCommand(),
+							};
+						},
+					));
 
 			createSecret = new remote.Command(
 				`${name}-create-secrets-mount`,
@@ -913,22 +934,24 @@ export class DockerComposeService
 					create: shellStrings.asSudoOutput(
 						pulumi
 							.secret({
-								secrets,
-								secretMountDir,
-								insertSecretMountAcls,
+								secretsIn: secrets,
+								secretMountDirIn: secretMountDir,
+								insertSecretMountAclsIn: insertSecretMountAcls,
 							})
-							.apply(({ secrets, secretMountDir, insertSecretMountAcls }) => {
-								// For now, the docker user, i.e. root is only allowed to access this
-								// This would need to be updated if we ran this under a different user (or we would want to add another usergroup)
-								const cmd =
-									`mkdir -p ${secretMountDir} && ` +
-									secrets
-										.map((secret) => {
-											return `echo "${secret.value}" > ${secretMountDir}/${secret.name} && chmod 600 ${secretMountDir}/${secret.name} && ${insertSecretMountAcls}`;
-										})
-										.join(" && ");
-								return cmd;
-							}),
+							.apply(
+								({ secretsIn, secretMountDirIn, insertSecretMountAclsIn }) => {
+									// For now, the docker user, i.e. root is only allowed to access this
+									// This would need to be updated if we ran this under a different user (or we would want to add another usergroup)
+									const cmd =
+										`mkdir -p ${secretMountDirIn} && ` +
+										secretsIn
+											.map((secret) => {
+												return `echo "${secret.value}" > ${secretMountDirIn}/${secret.name} && chmod 600 ${secretMountDirIn}/${secret.name} && ${insertSecretMountAclsIn}`;
+											})
+											.join(" && ");
+									return cmd;
+								},
+							),
 					),
 					triggers: [args.reuploadId],
 				},
@@ -940,13 +963,13 @@ export class DockerComposeService
 
 			secretCleanUpCommand = pulumi
 				.secret({
-					secrets,
-					secretMountDir,
+					secretsIn: secrets,
+					secretMountDirIn: secretMountDir,
 				})
-				.apply(({ secrets, secretMountDir }) => {
+				.apply(({ secretsIn, secretMountDirIn }) => {
 					return shellStrings.onlyFilesInDirCommand(
-						secretMountDir,
-						secrets.map((s) => s.name),
+						secretMountDirIn,
+						secretsIn.map((s) => s.name),
 					);
 				});
 		}
@@ -959,15 +982,11 @@ export class DockerComposeService
 					source: safeAsset.copyableSource,
 					remotePath: pulumi
 						.output({
-							homeDir,
-							serviceName,
+							homeDirIn: homeDir,
+							serviceNameIn: serviceName,
 						})
-						.apply(({ homeDir }) => `${homeDir}/docker/`),
-					triggers: [
-						safeAsset.copyableSource,
-						args.reuploadId,
-						ensureServiceDir.triggers,
-					],
+						.apply(({ homeDirIn }) => `${homeDirIn}/docker/`),
+					triggers: pulumi.output(dockerUpTriggers).apply((triggers) => triggers),
 				},
 				{
 					parent: this,
@@ -994,22 +1013,29 @@ export class DockerComposeService
 
 		const runCmd = pulumi
 			.output({
-				serviceName,
-				deployType,
-				composeFilePath,
-				service,
+				serviceNameIn: serviceName,
+				deployTypeIn: deployType,
+				composeFilePathIn: composeFilePath,
+				serviceIn: service,
 			})
-			.apply(async ({ serviceName, deployType, composeFilePath, service }) => {
-				const maxWaitTimeout = Math.ceil(
-					(await this.getMaxWaitTimeSeconds(service.healthcheck)) +
-						BUFFER_WAIT_TIME_SECONDS,
-				);
-				return dockerUpCommand(serviceName, {
-					deployType,
-					file: composeFilePath,
-					maxWaitTimeout,
-				});
-			});
+			.apply(
+				async ({
+					serviceNameIn,
+					deployTypeIn,
+					composeFilePathIn,
+					serviceIn,
+				}) => {
+					const maxWaitTimeout = Math.ceil(
+						(await this.getMaxWaitTimeSeconds(serviceIn.healthcheck)) +
+							BUFFER_WAIT_TIME_SECONDS,
+					);
+					return dockerUpCommand(serviceNameIn, {
+						deployType: deployTypeIn,
+						file: composeFilePathIn,
+						maxWaitTimeout,
+					});
+				},
+			);
 
 		const dockerUp = new remote.Command(
 			`${name}-docker-up-${deployType}`,
@@ -1019,27 +1045,12 @@ export class DockerComposeService
 				// Any time there is a change to the service or build information, re-run (not volumes that swap contents)
 				triggers: pulumi
 					.output({
-						ensureServiceDirTriggers: ensureServiceDir.triggers,
-						secrets,
-						reuploadId: args.reuploadId,
-						dockerUpTriggers,
+						secretsIn: secrets,
+						dockerUpTriggersIn: dockerUpTriggers,
 					})
-					.apply(
-						({
-							ensureServiceDirTriggers,
-							secrets,
-							dockerUpTriggers,
-							reuploadId,
-						}) => {
-							return [
-								reuploadId,
-								secrets,
-								...dockerUpTriggers,
-								// Pulumi seems to be deserializing this wrong so just use the object
-								ensureServiceDirTriggers,
-							];
-						},
-					),
+					.apply(({ secretsIn, dockerUpTriggersIn }) => {
+						return [secretsIn, ...dockerUpTriggersIn];
+					}),
 			},
 			{
 				parent: this,
@@ -1072,36 +1083,43 @@ export class DockerComposeService
 				create: shellStrings.asSudoOutput(
 					pulumi
 						.output({
-							secretCleanUpCommand,
+							secretCleanUpCommandIn: secretCleanUpCommand,
 							volumeCleanupCommand: serviceCleanupCommand,
-							setMountAcls,
-							setSecretMountAcls,
+							setMountAclsIn: setMountAcls,
+							setSecretMountAclsIn: setSecretMountAcls,
 						})
 						.apply(
 							({
-								secretCleanUpCommand,
+								secretCleanUpCommandIn,
 								volumeCleanupCommand,
-								setMountAcls,
-								setSecretMountAcls,
+								setMountAclsIn,
+								setSecretMountAclsIn,
 							}) => {
-								return `${secretCleanUpCommand ? `${secretCleanUpCommand};` : ""} ${volumeCleanupCommand} ${setMountAcls ? `&& ${setMountAcls}` : ""} ${setSecretMountAcls ? `&& ${setSecretMountAcls}` : ""}`;
+								return `${secretCleanUpCommandIn ? `${secretCleanUpCommandIn};` : ""} ${volumeCleanupCommand} ${setMountAclsIn ? `&& ${setMountAclsIn}` : ""} ${setSecretMountAclsIn ? `&& ${setSecretMountAclsIn}` : ""}`;
 							},
 						),
 				),
 				triggers: pulumi
 					.output({
-						secrets,
-						triggers: copy.triggers,
-						setMountAcls,
-						setSecretMountAcls,
+						secretsIn: secrets,
+						triggersIn: copy.triggers,
+						setMountAclsIn: setMountAcls,
+						setSecretMountAclsIn: setSecretMountAcls,
 					})
-					.apply(({ secrets, triggers, setMountAcls, setSecretMountAcls }) => [
-						secrets,
-						setMountAcls,
-						setSecretMountAcls,
-						// Pulumi seems to be deserializing this wrong, so just use the object
-						triggers,
-					]),
+					.apply(
+						({
+							secretsIn,
+							triggersIn,
+							setMountAclsIn,
+							setSecretMountAclsIn,
+						}) => [
+							secretsIn,
+							setMountAclsIn,
+							setSecretMountAclsIn,
+							// Pulumi seems to be deserializing this wrong, so just use the object
+							triggersIn,
+						],
+					),
 			},
 			{
 				parent: this,
@@ -1117,23 +1135,23 @@ export class DockerComposeService
 				delete: shellStrings.asSudoOutput(
 					pulumi
 						.output({
-							composeFilePath,
-							onFullDeleteAssetDirectories,
-							secretMountDir,
-							removeMountAcls,
-							removeSecretMountAcls,
+							composeFilePathIn: composeFilePath,
+							onFullDeleteAssetDirectoriesIn: onFullDeleteAssetDirectories,
+							secretMountDirIn: secretMountDir,
+							removeMountAclsIn: removeMountAcls,
+							removeSecretMountAclsIn: removeSecretMountAcls,
 						})
 						.apply(
 							({
-								composeFilePath,
-								onFullDeleteAssetDirectories,
-								secretMountDir,
-								removeMountAcls,
-								removeSecretMountAcls,
+								composeFilePathIn,
+								onFullDeleteAssetDirectoriesIn,
+								secretMountDirIn,
+								removeMountAclsIn,
+								removeSecretMountAclsIn,
 							}) =>
 								`${dockerDownCommand({
-									file: composeFilePath,
-								})} ${removeMountAcls ? `&& ${removeMountAcls}` : ""} ${removeSecretMountAcls ? `&& ${removeSecretMountAcls}` : ""} && ${onFullDeleteAssetDirectories} && ${shellStrings.deleteDirIfExists(secretMountDir)}`,
+									file: composeFilePathIn,
+								})} ${removeMountAclsIn ? `&& ${removeMountAclsIn}` : ""} ${removeSecretMountAclsIn ? `&& ${removeSecretMountAclsIn}` : ""} && ${onFullDeleteAssetDirectoriesIn} && ${shellStrings.deleteDirIfExists(secretMountDirIn)}`,
 						),
 				),
 			},
@@ -1145,7 +1163,7 @@ export class DockerComposeService
 
 	private getSocketServiceSidecarOptions(
 		accessDockerSocket: NonNullable<
-			BuildDockerfileV2Args["accessDockerSocket"]
+			DockerComposeServiceArgs["accessDockerSocket"]
 		>,
 	) {
 		const socketNetworkName = "socketProxy";
@@ -1234,7 +1252,7 @@ export class DockerComposeService
 	}
 
 	private getMountRelPath(
-		m: NonNullable<pulumi.Unwrap<BuildDockerfileV2Args["mounts"]>>[0],
+		m: NonNullable<pulumi.Unwrap<DockerComposeServiceArgs["mounts"]>>[0],
 	) {
 		return `${MOUNT_FOLDER}/${m.name}`;
 	}
@@ -1300,20 +1318,20 @@ function createCleanDirUploadResources(
 			...baseOpts,
 			dependsOn: pulumi
 				.output({
-					baseOpts,
-					opts,
+					baseOptsIn: baseOpts,
+					optsIn: opts,
 				})
-				.apply(({ baseOpts, opts }) => {
+				.apply(({ baseOptsIn, optsIn }) => {
 					return [
-						...(baseOpts?.dependsOn
-							? Array.isArray(baseOpts.dependsOn)
-								? baseOpts.dependsOn
-								: [baseOpts.dependsOn]
+						...(baseOptsIn?.dependsOn
+							? Array.isArray(baseOptsIn.dependsOn)
+								? baseOptsIn.dependsOn
+								: [baseOptsIn.dependsOn]
 							: []),
-						...(opts?.dependsOn
-							? Array.isArray(opts.dependsOn)
-								? opts.dependsOn
-								: [opts.dependsOn]
+						...(optsIn?.dependsOn
+							? Array.isArray(optsIn.dependsOn)
+								? optsIn.dependsOn
+								: [optsIn.dependsOn]
 							: []),
 					];
 				}),
@@ -1344,21 +1362,21 @@ function createCleanDirUploadResources(
 				...baseOpts,
 				dependsOn: pulumi
 					.output({
-						baseOpts,
-						opts,
+						baseOptsIn: baseOpts,
+						optsIn: opts,
 					})
-					.apply(({ baseOpts, opts }) => {
+					.apply(({ baseOptsIn, optsIn }) => {
 						return [
 							copyToRemote!,
-							...(baseOpts?.dependsOn
-								? Array.isArray(baseOpts.dependsOn)
-									? baseOpts.dependsOn
-									: [baseOpts.dependsOn]
+							...(baseOptsIn?.dependsOn
+								? Array.isArray(baseOptsIn.dependsOn)
+									? baseOptsIn.dependsOn
+									: [baseOptsIn.dependsOn]
 								: []),
-							...(opts?.dependsOn
-								? Array.isArray(opts.dependsOn)
-									? opts.dependsOn
-									: [opts.dependsOn]
+							...(optsIn?.dependsOn
+								? Array.isArray(optsIn.dependsOn)
+									? optsIn.dependsOn
+									: [optsIn.dependsOn]
 								: []),
 						];
 					}),
