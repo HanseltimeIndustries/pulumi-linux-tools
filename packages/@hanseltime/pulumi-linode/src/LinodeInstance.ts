@@ -93,6 +93,9 @@ interface LinodeInstanceArgs
 	};
 	vlan?: {
 		network: VLAN;
+		/**
+		 * The ip of this specific machine on that VLAN
+		 */
 		ip: pulumi.Input<string>;
 	};
 	/**

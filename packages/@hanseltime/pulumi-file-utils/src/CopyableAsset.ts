@@ -102,31 +102,35 @@ export class CopyableAsset {
 		}
 	}
 
-	private static hashFunction: ((compressed: Buffer, asset: CopyableAsset) => Buffer | string) | undefined
+	private static hashFunction:
+		| ((compressed: Buffer, asset: CopyableAsset) => Buffer | string)
+		| undefined;
 	/**
 	 * This sets a hash function that will take the compressed bytes of a buffer for an asset and returns
 	 * a Buffer or string that should be used for change detect.
-	 * 
+	 *
 	 * The second parameter of function you pass is the asset so that you can create custom hashes
 	 * for only certain problematic assets if need be.
-	 * @param func 
+	 * @param func
 	 */
-	public static setChangeDetectHashFunction(func: (compressed: Buffer, asset: CopyableAsset) => Buffer | string) {
+	public static setChangeDetectHashFunction(
+		func: (compressed: Buffer, asset: CopyableAsset) => Buffer | string,
+	) {
 		if (this.hashFunction) {
-			throw new Error('Can only setChangeDetectHashFunction once!')
+			throw new Error("Can only setChangeDetectHashFunction once!");
 		}
-		this.hashFunction = func
+		this.hashFunction = func;
 	}
 
 	/**
 	 * Simple hash algorithm that calculates the sha256 of a buffer and also appends the length
 	 * so that collisions from different lengths can be minimized
-	 * @param buffer 
-	 * @returns 
+	 * @param buffer
+	 * @returns
 	 */
 	public static sha256AndLength(buffer: Buffer) {
-		const hash = createHash('sha256').update(buffer).digest('hex');
-		return `${hash}:${buffer.length}`
+		const hash = createHash("sha256").update(buffer).digest("hex");
+		return `${hash}:${buffer.length}`;
 	}
 
 	/**
@@ -405,7 +409,7 @@ export class CopyableAsset {
 				const testFilePath = join(tmpChangeDetectDir, testFileName);
 				// This is expensive so only compute it when necessary
 				if (existsSync(testFilePath)) {
-					const content = await readFile(testFilePath)
+					const content = await readFile(testFilePath);
 					if (CopyableAsset.hashFunction) {
 						return CopyableAsset.hashFunction(content, this);
 					}
@@ -442,7 +446,7 @@ export class CopyableAsset {
 					},
 					files,
 				);
-				const content = await readFile(testFilePath)
+				const content = await readFile(testFilePath);
 				if (CopyableAsset.hashFunction) {
 					return CopyableAsset.hashFunction(content, this);
 				}

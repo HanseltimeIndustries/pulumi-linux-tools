@@ -986,7 +986,9 @@ export class DockerComposeService
 							serviceNameIn: serviceName,
 						})
 						.apply(({ homeDirIn }) => `${homeDirIn}/docker/`),
-					triggers: pulumi.output(dockerUpTriggers).apply((triggers) => triggers),
+					triggers: pulumi
+						.output(dockerUpTriggers)
+						.apply((triggers) => triggers),
 				},
 				{
 					parent: this,

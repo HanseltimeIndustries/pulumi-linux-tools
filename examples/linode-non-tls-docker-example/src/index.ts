@@ -1,9 +1,10 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as std from "@pulumi/std";
-import { join } from "path";
+import { CopyableAsset } from "@hanseltime/pulumi-file-utils";
 import { LinodeInstance } from "@hanseltime/pulumi-linode";
-import { homedir } from "os";
-import { readFileSync } from "fs";
+import {
+	DockerComposeService,
+	DockerDeployType,
+	DockerInstall,
+} from "@hanseltime/pulumi-linux-docker";
 import {
 	IpSetResource,
 	IpTablesChain,
@@ -11,18 +12,21 @@ import {
 	IpTablesInstall,
 	IpTablesSave,
 } from "@hanseltime/pulumi-linux-iptables";
+import { TraefikRouteRule } from "@hanseltime/traefik";
+import * as pulumi from "@pulumi/pulumi";
+import * as std from "@pulumi/std";
+import { readFileSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
 import {
 	blacklistV4,
 	blacklistV6,
 	globalBlockIpSetIpv4,
 	globalBlockIpSetIpv6,
 } from "./iptables";
-import {
-	DockerComposeService,
-	DockerDeployType,
-	DockerInstall,
-} from "@hanseltime/pulumi-linux-docker";
-import { TraefikRouteRule } from "@hanseltime/traefik";
+
+// We are fine with risking a collision for a faster comparison of docker files
+CopyableAsset.setChangeDetectHashFunction(CopyableAsset.sha256AndLength);
 
 const config = new pulumi.Config();
 const REGION = config.require("linodeRegion");
@@ -62,7 +66,7 @@ const instance = new LinodeInstance("machine1", {
 	region: REGION,
 	// Can be found by running linode-cli linodes types --json
 	type: "g6-nanode-1",
-	rootPass: config.require("rootPassword"),
+	rootPass: config.requireSecret("rootPassword"),
 	initialRootKey: initialRootKey1,
 	sshKey: deployPrivateKey,
 	sshKeyPassword: config.requireSecret("sshPassword"),
