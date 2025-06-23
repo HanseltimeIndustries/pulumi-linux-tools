@@ -1,9 +1,1 @@
-config:
-  linode-public-internet-vpn-example:sshPassword:
-    secure: AAABAEUV6EQp5UHNBGUPiuhMp2Ti6X2tPfAq7Hj5AXNf4yn+V7T1/a/4rn8=
-  linode-public-internet-vpn-example:deploymentSSHKey: linode_public_internet_vpn_rsa.pub
-  linode-public-internet-vpn-example:rootPassword:
-    secure: AAABAGLb7zRnAHsy50/hLHQp9liwPrNSkxoD2O3HyHYOEigxdq82ElYveEdKK4Vw
-  linode-public-internet-vpn-example:automationUserPassword:
-    secure: AAABALHbQqjjk+SOZzK8cQ4FntJNKKt+54VOkN6IdFZyrnctwldCvaY/MXSPBAUj
-  linode-public-internet-vpn-example:linodeRegion: us-central
+# Uncommitted for the sake of the template.  If you are using this, you can commit the secrets you add
