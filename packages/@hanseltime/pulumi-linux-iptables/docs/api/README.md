@@ -17,6 +17,7 @@
 - [IpTablesHelper](classes/IpTablesHelper.md)
 - [IpTablesInstall](classes/IpTablesInstall.md)
 - [IpTablesSave](classes/IpTablesSave.md)
+- [PredefinedRules](classes/PredefinedRules.md)
 
 ## Interfaces
 

@@ -161,10 +161,14 @@ export interface IpTablesChainArgs {
 	table: IpTablesTable;
 	/**
 	 * All rules for the chain in iptables (ipv4)
+	 *
+	 * The order of the rules is the order of evaluation (i.e. 1 -> 2 -> 3)
 	 */
 	rulesIpV4: IpV4TablesRule[];
 	/**
 	 * All rules for the chain in iptables (ipv6)
+	 *
+	 * The order of the rules is the order of evaluation (i.e. 1 -> 2 -> 3)
 	 */
 	rulesIpV6: IpV6TablesRule[];
 	/**

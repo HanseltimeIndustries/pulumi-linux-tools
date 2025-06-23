@@ -1,4 +1,4 @@
-import type { IpV4TablesRule, IpV6TablesRule } from "./types";
+import type { IpProtocol, IpV4TablesRule, IpV6TablesRule } from "./types";
 
 /**
  * Simple Helper class with static methods to generate rules that are common
@@ -21,8 +21,14 @@ export class PredefinedRules {
 		 *
 		 * For instance, the :22 for SSH
 		 */
-		exceptionPorts: number[];
-	}) {
+		exceptionPorts: {
+			/**
+			 * All protocols that are allowed on this port to connect first
+			 */
+			protocols: IpProtocol[];
+			port: number;
+		}[];
+	}): (IpV4TablesRule | IpV6TablesRule)[] {
 		const rejectAllOthersOnInterface: IpV4TablesRule | IpV6TablesRule = {
 			inInterface: options.interface,
 			jump: "DROP",
@@ -35,14 +41,23 @@ export class PredefinedRules {
 			},
 		};
 		const allowIncomingPortExceptions: (IpV4TablesRule | IpV6TablesRule)[] =
-			options.exceptionPorts.map((p) => ({
-				inInterface: options.interface,
-				destinationPorts: p,
-				jump: "ACCEPT",
-			}));
+			options.exceptionPorts.reduce(
+				(exceptions, { port, protocols }) => {
+					protocols.forEach((prot) => {
+						exceptions.push({
+							inInterface: options.interface,
+							destinationPorts: port,
+							protocol: prot,
+							jump: "ACCEPT",
+						});
+					});
+					return exceptions;
+				},
+				[] as (IpV4TablesRule | IpV6TablesRule)[],
+			);
 
 		return [
-			allowIncomingPortExceptions,
+			...allowIncomingPortExceptions,
 			allowEstablishedConnections,
 			rejectAllOthersOnInterface,
 		];
