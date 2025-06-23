@@ -1,4 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
+import { createHash } from "crypto";
 import { existsSync, rmSync, statSync } from "fs";
 import {
 	cp,
@@ -9,7 +10,7 @@ import {
 	utimes,
 	writeFile,
 } from "fs/promises";
-import { isAbsolute, join, resolve } from "path";
+import { dirname, isAbsolute, join, resolve } from "path";
 import * as tar from "tar";
 
 const INTERRUPT_EVENTS = [
@@ -31,10 +32,12 @@ function cleanUpDirs() {
 	const dirs = [...CLEAN_UP_DIRS];
 	CLEAN_UP_DIRS.length = 0;
 	dirs.forEach((dir) => {
-		rmSync(dir, {
-			recursive: true,
-			force: true,
-		});
+		if (existsSync(dir)) {
+			rmSync(dir, {
+				recursive: true,
+				force: true,
+			});
+		}
 	});
 }
 
@@ -69,9 +72,21 @@ export interface CopyableAssetArgs {
 export class CopyableAsset {
 	static ids = new Set<string>();
 
-	// changeDetect: pulumi.Output<Buffer | pulumi.asset.FileAsset | pulumi.asset.FileArchive>;
-
+	/**
+	 * the unique id of this asset (has to be unique across all assets created so that we don't
+	 * overwrite)
+	 */
 	readonly id: string;
+	/**
+	 * The location where all of the assets are built to or just the path if the base asset was
+	 * just a file or directory
+	 */
+	readonly path: pulumi.Output<string>;
+	/**
+	 * If you use the 'changeDetect' function, this will create the tar of this directory
+	 * in this location
+	 */
+	readonly tmpChangeDetectDir: pulumi.Output<string | undefined>;
 
 	readonly copyableSource: pulumi.Output<
 		pulumi.asset.Asset | pulumi.asset.Archive
@@ -79,12 +94,43 @@ export class CopyableAsset {
 
 	private static registered: boolean = false;
 	private static registerCleanup() {
-		if (!this.registered) {
+		if (!CopyableAsset.registered) {
 			INTERRUPT_EVENTS.forEach((eventType) => {
 				process.once(eventType, cleanUpDirs);
 			});
-			this.registered = true;
+			CopyableAsset.registered = true;
 		}
+	}
+
+	private static hashFunction:
+		| ((compressed: Buffer, asset: CopyableAsset) => Buffer | string)
+		| undefined;
+	/**
+	 * This sets a hash function that will take the compressed bytes of a buffer for an asset and returns
+	 * a Buffer or string that should be used for change detect.
+	 *
+	 * The second parameter of function you pass is the asset so that you can create custom hashes
+	 * for only certain problematic assets if need be.
+	 * @param func
+	 */
+	public static setChangeDetectHashFunction(
+		func: (compressed: Buffer, asset: CopyableAsset) => Buffer | string,
+	) {
+		if (this.hashFunction) {
+			throw new Error("Can only setChangeDetectHashFunction once!");
+		}
+		this.hashFunction = func;
+	}
+
+	/**
+	 * Simple hash algorithm that calculates the sha256 of a buffer and also appends the length
+	 * so that collisions from different lengths can be minimized
+	 * @param buffer
+	 * @returns
+	 */
+	public static sha256AndLength(buffer: Buffer) {
+		const hash = createHash("sha256").update(buffer).digest("hex");
+		return `${hash}:${buffer.length}`;
 	}
 
 	/**
@@ -104,7 +150,7 @@ export class CopyableAsset {
 		args: CopyableAssetArgs,
 	): CopyableAsset {
 		return new CopyableAsset(
-			`${this.calculateUrn(parent).replaceAll(/[:\$/\\]/g, "_")}_${postFix}`,
+			`${CopyableAsset.calculateUrn(parent).replaceAll(/[:$/\\]/g, "_")}_${postFix}`,
 			args,
 		);
 	}
@@ -114,7 +160,7 @@ export class CopyableAsset {
 
 		const urnComponent = `${cast.__pulumiType}:${cast.__name}${post ? `:${post}` : ""}`;
 		if (cast.__parentResource) {
-			return this.calculateUrn(cast.__parentResource);
+			return CopyableAsset.calculateUrn(cast.__parentResource);
 		}
 		return urnComponent;
 	}
@@ -144,14 +190,14 @@ export class CopyableAsset {
 
 		this.id = id;
 
-		const tmpDir = pulumi
+		const { tmpChangeDetectDir, path, copyableSource } = pulumi
 			.output(args)
-			.apply(async ({ tmpCopyDir, asset, synthName }) => {
+			.apply(async ({ tmpCopyDir, asset, synthName, noClean }) => {
 				const assetType = this.assetType(asset);
-				if (
+				const isSynthetic =
 					assetType === AssetTypes.StringAsset ||
-					assetType === AssetTypes.AssetArchive
-				) {
+					assetType === AssetTypes.AssetArchive;
+				if (isSynthetic) {
 					if (!tmpCopyDir) {
 						throw new pulumi.RunError(
 							`CopyableAsset(${this.id}): Must supply a tmpCopyDir to use an AssetArchive or StringAsset`,
@@ -168,50 +214,93 @@ export class CopyableAsset {
 							`CopyableAsset(${this.id}): Cannot supply an absolute path ${tmpCopyDir}.  This will not work cross-machine since paths are part of hashing.`,
 						);
 					}
+				}
 
-					const tmpDir = "./" + join(tmpCopyDir, id);
-					if (existsSync(tmpDir)) {
+				let tmpDirRet: string | undefined;
+				let tmpChangeDetectDirRet: string | undefined;
+				if (tmpCopyDir) {
+					tmpDirRet = `./${join(tmpCopyDir, id)}`;
+					tmpChangeDetectDirRet = `${tmpDirRet}-cdetect`;
+					if (existsSync(tmpDirRet)) {
 						// remove any previously copied data
-						await rm(tmpDir, {
+						await rm(tmpDirRet, {
 							recursive: true,
 							force: true,
 						});
 					}
-					await mkdir(tmpDir, {
+					await mkdir(tmpDirRet, {
 						recursive: true,
 					});
-					await utimes(tmpDir, DUMMY_TIMESTAMP, DUMMY_TIMESTAMP);
-					return tmpDir;
-				}
-				return undefined;
-			});
-		this.copyableSource = pulumi
-			.output({
-				...args,
-				tmpDir,
-			})
-			.apply(async ({ asset, synthName, noClean, tmpDir }) => {
-				const assetType = this.assetType(asset);
-				if (
-					assetType === AssetTypes.StringAsset ||
-					assetType === AssetTypes.AssetArchive
-				) {
-					await this.createSyntheticAsset(asset, synthName!, tmpDir!);
-
 					// Add to exit handler array
 					if (!noClean) {
-						CLEAN_UP_DIRS.push(resolve(process.cwd(), tmpDir!));
+						CLEAN_UP_DIRS.push(resolve(process.cwd(), tmpDirRet!));
 					}
-
-					if (statSync(join(tmpDir!, synthName!)).isDirectory()) {
-						return new pulumi.asset.FileArchive(join(tmpDir!, synthName!));
-					} else {
-						return new pulumi.asset.FileAsset(join(tmpDir!, synthName!));
+					await utimes(tmpDirRet, DUMMY_TIMESTAMP, DUMMY_TIMESTAMP);
+					if (existsSync(tmpChangeDetectDirRet)) {
+						// remove any previously copied data
+						await rm(tmpChangeDetectDirRet, {
+							recursive: true,
+							force: true,
+						});
 					}
-				} else {
-					return asset;
+					await mkdir(tmpChangeDetectDirRet, {
+						recursive: true,
+					});
+					// We want to clean up these files since they could hold the same amount of info
+					// as the synthetic
+					if (!noClean) {
+						if (isAbsolute(tmpChangeDetectDirRet)) {
+							CLEAN_UP_DIRS.push(tmpChangeDetectDirRet);
+						} else {
+							CLEAN_UP_DIRS.push(resolve(process.cwd(), tmpChangeDetectDirRet));
+						}
+					}
 				}
+
+				let pathRet: string = "";
+				if (isSynthetic) {
+					pathRet = join(tmpDirRet!, synthName!);
+				} else if (assetType === AssetTypes.PathBasedAsset) {
+					pathRet = await (
+						asset as pulumi.asset.FileAsset | pulumi.asset.FileArchive
+					).path;
+				} else {
+					throw new Error("Unexpected asset type " + assetType);
+				}
+
+				let copyableSourceRet:
+					| pulumi.asset.FileAsset
+					| pulumi.asset.FileArchive;
+				if (isSynthetic) {
+					await this.createSyntheticAsset(asset, synthName!, tmpDirRet!);
+
+					if (statSync(join(tmpDirRet!, synthName!)).isDirectory()) {
+						copyableSourceRet = new pulumi.asset.FileArchive(
+							join(tmpDirRet!, synthName!),
+						);
+					} else {
+						copyableSourceRet = new pulumi.asset.FileAsset(
+							join(tmpDirRet!, synthName!),
+						);
+					}
+				} else if (assetType === AssetTypes.PathBasedAsset) {
+					copyableSourceRet = asset as
+						| pulumi.asset.FileArchive
+						| pulumi.asset.FileAsset;
+				} else {
+					throw new Error(`Unexpected asset type ${assetType}`);
+				}
+				const ret = {
+					tmpDir: tmpDirRet,
+					tmpChangeDetectDir: tmpChangeDetectDirRet,
+					path: pathRet,
+					copyableSource: copyableSourceRet,
+				};
+				return ret;
 			});
+		this.path = path;
+		this.tmpChangeDetectDir = tmpChangeDetectDir;
+		this.copyableSource = copyableSource;
 
 		CopyableAsset.registerCleanup();
 	}
@@ -245,14 +334,18 @@ export class CopyableAsset {
 			);
 			await utimes(assetPath, DUMMY_TIMESTAMP, DUMMY_TIMESTAMP);
 		} else if (assetType === AssetTypes.PathBasedAsset) {
-			await cp(
-				await (asset as pulumi.asset.FileArchive | pulumi.asset.FileAsset).path,
-				assetPath,
-				{
-					recursive: true,
-					preserveTimestamps: true,
-				},
-			);
+			const onMachinePath = await (
+				asset as pulumi.asset.FileArchive | pulumi.asset.FileAsset
+			).path;
+			await cp(onMachinePath, assetPath, {
+				recursive: true,
+				preserveTimestamps: true,
+			});
+			// There's a bug where the times on the context may be different for a directory
+			const stats = statSync(onMachinePath);
+			if (stats.isDirectory()) {
+				utimes(assetPath, DUMMY_TIMESTAMP, DUMMY_TIMESTAMP);
+			}
 		} else {
 			throw new pulumi.RunError(
 				`CopyableAsset(${this.id}): Unexpected asset type for creating synthetic asset! ${assetType}`,
@@ -283,29 +376,82 @@ export class CopyableAsset {
 		}
 	}
 
-	async createChangeDetect(dir: string) {
-		const testFileName = `change-detect.tgz`;
-		const files = (await readdir(dir)).filter((f) => f !== testFileName);
-		const testFilePath = join(dir, testFileName);
-		try {
-			await tar.create(
-				{
-					gzip: true,
-					file: testFilePath,
-					cwd: dir + "/",
-					mtime: new Date("1995-12-17T03:24:00"),
-					sync: true,
-					portable: true,
-					noDirRecurse: false,
-				},
-				files,
-			);
-			return await readFile(testFilePath);
-		} finally {
-			if (existsSync(testFilePath)) {
-				// await rm(testFilePath);
-			}
-		}
+	/**
+	 * Creates a deterministic tar of the this asset that can be used as a comparison buffer
+	 * for changes.  This is better than using the "source" as a comparison point since things
+	 * like permissions changes, etc. can become a problem and we have sane settings to only compare
+	 * contents.
+	 * @param {string} subPath - If provided this will only detect changes on a certain subpath
+	 * @param {boolean} pathMayNotExist - if the subPath does not exist and that is not an error, will just return null
+	 * @returns
+	 */
+	createChangeDetect(
+		subPath?: string,
+		pathMayNotExist?: boolean,
+	): pulumi.Output<Buffer | string | null> {
+		// TODO: sanitize the
+		const testFileName = subPath
+			? `change-detect_${subPath}.tgz`
+			: `change-detect.tgz`;
+		return pulumi
+			.secret({
+				path: this.path,
+				tmpChangeDetectDir: this.tmpChangeDetectDir,
+				// This is here just to make sure we do not run this before the
+				copyableSource: this.copyableSource,
+			})
+			.apply(async ({ path, tmpChangeDetectDir }) => {
+				if (!tmpChangeDetectDir) {
+					throw new Error(
+						`Must supply tmpCopyDir for changeDetect to work when creating CopyableAsset`,
+					);
+				}
+				const testFilePath = join(tmpChangeDetectDir, testFileName);
+				// This is expensive so only compute it when necessary
+				if (existsSync(testFilePath)) {
+					const content = await readFile(testFilePath);
+					if (CopyableAsset.hashFunction) {
+						return CopyableAsset.hashFunction(content, this);
+					}
+					return content;
+				}
+
+				const files: string[] = [];
+				let cwd: string;
+				if (statSync(path).isDirectory()) {
+					const fullPath = subPath ? join(path, subPath) : path;
+					if (pathMayNotExist && !existsSync(fullPath)) {
+						return null;
+					}
+					files.push(...(await readdir(fullPath)));
+					cwd = fullPath;
+				} else {
+					if (subPath) {
+						throw new Error(
+							`Cannot perform subPath change detect on non-directroy asset: ${path}.  Subpath: ${subPath}`,
+						);
+					}
+					files.push(path);
+					cwd = dirname(path);
+				}
+				await tar.create(
+					{
+						gzip: true,
+						file: testFilePath,
+						cwd,
+						mtime: new Date(DUMMY_TIMESTAMP),
+						sync: true,
+						portable: true,
+						noDirRecurse: false,
+					},
+					files,
+				);
+				const content = await readFile(testFilePath);
+				if (CopyableAsset.hashFunction) {
+					return CopyableAsset.hashFunction(content, this);
+				}
+				return content;
+			});
 	}
 }
 

@@ -1,4 +1,4 @@
-import {
+import type {
 	BitMapIpCreate,
 	BitMapIpEntryAdd,
 	BitMapIpMacCreate,
@@ -33,8 +33,8 @@ import {
 	HashNetPortNetEntryAdd,
 	ListSetCreate,
 	ListSetEntryAdd,
-	SetTypes,
 } from "./types";
+import { SetTypes } from "./types";
 
 /**
  * Helpful utility class for programmatically representing ipsets.
@@ -220,7 +220,7 @@ export class IpSet<
 			},
 		);
 
-		return `ipset create ${this.name}${postfix} ${this.createOptions.setType} ${flags}`;
+		return `ipset create ${this.name}${postfix} ${setType} ${flags}`;
 	}
 	/**
 	 * Generates an array of commands to add the ipset entries to the named ipset

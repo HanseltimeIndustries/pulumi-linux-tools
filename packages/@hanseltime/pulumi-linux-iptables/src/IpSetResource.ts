@@ -1,9 +1,9 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as command from "@pulumi/command";
-import { IpSet } from "./Ipset";
-import { CreateInterfaces, EntryAddInterfaces } from "./types";
-import { LIBRARY_PREFIX } from "./constants";
 import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import * as command from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import { LIBRARY_PREFIX } from "./constants";
+import type { IpSet } from "./Ipset";
+import type { CreateInterfaces, EntryAddInterfaces } from "./types";
 
 export interface IpSetResourceArgs {
 	connection: pulumi.Input<command.types.input.remote.ConnectionArgs>;

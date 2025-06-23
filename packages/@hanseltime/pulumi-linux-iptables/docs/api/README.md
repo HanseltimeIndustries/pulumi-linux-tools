@@ -92,3 +92,8 @@
 - [IPFamily](type-aliases/IPFamily.md)
 - [IpProtocol](type-aliases/IpProtocol.md)
 - [IpTablesTable](type-aliases/IpTablesTable.md)
+
+## Functions
+
+- [createRuleCommand](functions/createRuleCommand.md)
+- [createRuleSpecCli](functions/createRuleSpecCli.md)

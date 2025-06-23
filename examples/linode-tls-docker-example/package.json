@@ -1,14 +1,16 @@
 {
 	"name": "linode-tls-docker-example",
 	"main": "src/index.ts",
-	"workspaces": ["packages/@hanseltime/*"],
+	"workspaces": [
+		"packages/@hanseltime/*"
+	],
 	"scripts": {
 		"lint": "biome lint",
 		"format": "biome format",
 		"build": "tsc"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
+		"@biomejs/biome": "^2.0.4",
 		"@types/dot-object": "^2.1.6",
 		"@types/js-yaml": "^4.0.9",
 		"@types/node": "^20",

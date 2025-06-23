@@ -1,8 +1,9 @@
-import {
-	RuleType,
-	HeaderRule,
-	HeaderRegexpRule,
+import type {
+	BuiltRules,
 	ClientIpRule,
+	Condition,
+	HeaderRegexpRule,
+	HeaderRule,
 	HostRegexpRule,
 	HostRule,
 	MethodRule,
@@ -11,10 +12,8 @@ import {
 	PathRule,
 	QueryRegexpRule,
 	QueryRule,
-	BuiltRules,
-	RuleCond,
-	Condition,
 } from "./types";
+import { RuleCond, RuleType } from "./types";
 
 export enum TraefikRuleOp {
 	Not,

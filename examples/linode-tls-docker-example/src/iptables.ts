@@ -5,11 +5,11 @@
  * with no ips.
  */
 
-import {
-	IpSet,
+import type {
 	IpV4TablesRule,
 	IpV6TablesRule,
 } from "@hanseltime/pulumi-linux-iptables";
+import { IpSet } from "@hanseltime/pulumi-linux-iptables";
 
 export const globalBlockIpSetIpv4 = IpSet.HashIp("GLOBAL_BLOCK_IPV4", {
 	family: "inet",

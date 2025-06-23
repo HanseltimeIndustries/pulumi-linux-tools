@@ -1,7 +1,7 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as command from "@pulumi/command";
-import { LIBRARY_PREFIX } from "./constants";
 import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import * as command from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import { LIBRARY_PREFIX } from "./constants";
 
 export interface IpTablesInstallArgs {
 	connection: pulumi.Input<command.types.input.remote.ConnectionArgs>;

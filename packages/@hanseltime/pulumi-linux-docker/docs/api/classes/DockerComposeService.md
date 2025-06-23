@@ -51,7 +51,7 @@ Deployment types:
 
 ##### args
 
-[`BuildDockerfileV2Args`](../interfaces/BuildDockerfileV2Args.md)
+[`DockerComposeServiceArgs`](../interfaces/DockerComposeServiceArgs.md)
 
 ##### opts?
 

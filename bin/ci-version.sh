@@ -26,4 +26,4 @@ fi
 yarn changeset version
 
 # apply biome format for changed files
-yarn format --fix
+yarn biome format --fix

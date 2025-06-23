@@ -1,6 +1,6 @@
 # @hanseltime/pulumi-utils
 
-[Raw docs](./docs/)
+[API docs](./docs/api)
 
 This is a package that exposes somme helpful utility methods for working with pulumi outputs (in typescript).
 Primarily, this package provides a standard interface for depending on outputs so that you keep some standard

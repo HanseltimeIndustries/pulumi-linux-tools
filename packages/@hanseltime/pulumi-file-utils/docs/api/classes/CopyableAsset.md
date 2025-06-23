@@ -43,6 +43,27 @@ for any assets that are synthetic.
 
 > `readonly` **id**: `string`
 
+the unique id of this asset (has to be unique across all assets created so that we don't
+overwrite)
+
+***
+
+### path
+
+> `readonly` **path**: `Output`\<`string`\>
+
+The location where all of the assets are built to or just the path if the base asset was
+just a file or directory
+
+***
+
+### tmpChangeDetectDir
+
+> `readonly` **tmpChangeDetectDir**: `Output`\<`undefined` \| `string`\>
+
+If you use the 'changeDetect' function, this will create the tar of this directory
+in this location
+
 ***
 
 ### ids
@@ -71,17 +92,30 @@ We have to duck-type since pulumi.output strips class indentification
 
 ### createChangeDetect()
 
-> **createChangeDetect**(`dir`): `Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
+> **createChangeDetect**(`subPath?`, `pathMayNotExist?`): `Output`\<`null` \| `string` \| `Buffer`\<`ArrayBufferLike`\>\>
+
+Creates a deterministic tar of the this asset that can be used as a comparison buffer
+for changes.  This is better than using the "source" as a comparison point since things
+like permissions changes, etc. can become a problem and we have sane settings to only compare
+contents.
 
 #### Parameters
 
-##### dir
+##### subPath?
 
 `string`
 
+If provided this will only detect changes on a certain subpath
+
+##### pathMayNotExist?
+
+`boolean`
+
+if the subPath does not exist and that is not an error, will just return null
+
 #### Returns
 
-`Promise`\<`Buffer`\<`ArrayBufferLike`\>\>
+`Output`\<`null` \| `string` \| `Buffer`\<`ArrayBufferLike`\>\>
 
 ***
 
@@ -136,3 +170,44 @@ a postfix that will be added
 #### Returns
 
 `CopyableAsset`
+
+***
+
+### setChangeDetectHashFunction()
+
+> `static` **setChangeDetectHashFunction**(`func`): `void`
+
+This sets a hash function that will take the compressed bytes of a buffer for an asset and returns
+a Buffer or string that should be used for change detect.
+
+The second parameter of function you pass is the asset so that you can create custom hashes
+for only certain problematic assets if need be.
+
+#### Parameters
+
+##### func
+
+(`compressed`, `asset`) => `string` \| `Buffer`\<`ArrayBufferLike`\>
+
+#### Returns
+
+`void`
+
+***
+
+### sha256AndLength()
+
+> `static` **sha256AndLength**(`buffer`): `string`
+
+Simple hash algorithm that calculates the sha256 of a buffer and also appends the length
+so that collisions from different lengths can be minimized
+
+#### Parameters
+
+##### buffer
+
+`Buffer`
+
+#### Returns
+
+`string`

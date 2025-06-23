@@ -1,13 +1,13 @@
-import * as pulumi from "@pulumi/pulumi";
+import { shellStrings } from "@hanseltime/pulumi-linux-base";
 import * as command from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import { LIBRARY_PREFIX } from "./constants";
 import {
 	createBaseCommand,
 	createCreateCommand,
 	createFullDeleteCommand,
 } from "./iptablesUtils";
-import { ChangeSignature } from "./pulumitypes";
-import { LIBRARY_PREFIX } from "./constants";
-import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import type { ChangeSignature } from "./pulumitypes";
 
 /**
  * If you need to create table chains early, you can declare the creation as separate from the chain + rules
@@ -46,13 +46,13 @@ export class IpTablesChainCreate
 
 		const { createCommand, deleteCommand, chainName } = pulumi
 			.output(args)
-			.apply(({ name, table }) => {
+			.apply(({ name: nameIn, table }) => {
 				const ipv4Base = `${createBaseCommand("inet", table)}`;
 				const ipv6Base = `${createBaseCommand("inet6", table)}`;
 				return {
-					createCommand: `${createCreateCommand(ipv4Base, name)};${createCreateCommand(ipv6Base, name)}`,
-					deleteCommand: `${createFullDeleteCommand(ipv4Base, name)};${createFullDeleteCommand(ipv6Base, name)}`,
-					chainName: name,
+					createCommand: `${createCreateCommand(ipv4Base, nameIn)};${createCreateCommand(ipv6Base, nameIn)}`,
+					deleteCommand: `${createFullDeleteCommand(ipv4Base, nameIn)};${createFullDeleteCommand(ipv6Base, nameIn)}`,
+					chainName: nameIn,
 				};
 			});
 

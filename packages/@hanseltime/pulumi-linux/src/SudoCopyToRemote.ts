@@ -1,8 +1,9 @@
+import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import type { types } from "@pulumi/command";
+import { remote } from "@pulumi/command";
 import * as pulumi from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
 import { statSync } from "fs";
 import { basename } from "path";
-import { shellStrings } from "@hanseltime/pulumi-linux-base";
 import { LIBRARY_PREFIX } from "./constants";
 
 export interface SudoCopyToRemoteArgs extends remote.CopyToRemoteArgs {
@@ -44,13 +45,10 @@ export class SudoCopyToRemote extends pulumi.ComponentResource {
 	) {
 		super(`${LIBRARY_PREFIX}:SudoCopyToRemote`, name, args, opts);
 
-		// So if the tempDirectory Exists, we still need to create a "name" directory for parallelism
-		// Then we need to copy and then we need to transfer.... fuck that's alot
-
 		const { tmpFolder } = pulumi.output(args).apply(async ({ userTmpPath }) => {
-			const tmpFolder = `${userTmpPath}/${name}`;
+			const _tmpFolder = `${userTmpPath}/${name}`;
 			return {
-				tmpFolder,
+				tmpFolder: _tmpFolder,
 			};
 		});
 
@@ -60,11 +58,11 @@ export class SudoCopyToRemote extends pulumi.ComponentResource {
 				connection: args.connection,
 				// Remove any failed ssh session and apply it under the conneciton user
 				create: tmpFolder.apply(
-					(tmpFolder) =>
-						`mkdir -p ${tmpFolder} && ${shellStrings.deleteDirElements(tmpFolder)}`,
+					(_tmpFolder) =>
+						`mkdir -p ${_tmpFolder} && ${shellStrings.deleteDirElements(_tmpFolder)}`,
 				),
 				delete: shellStrings.asSudoOutput(
-					tmpFolder.apply((tmpFolder) => `rm -rf ${tmpFolder}`),
+					tmpFolder.apply((_tmpFolder) => `rm -rf ${_tmpFolder}`),
 				),
 			},
 			{
@@ -97,11 +95,11 @@ export class SudoCopyToRemote extends pulumi.ComponentResource {
 				create: shellStrings.asSudoOutput(
 					pulumi
 						.output({
-							tmpFolder,
+							_tmpFolder: tmpFolder,
 							remotePath: args.remotePath,
 							source: args.source,
 						})
-						.apply(async ({ tmpFolder, remotePath, source }) => {
+						.apply(async ({ _tmpFolder, remotePath, source }) => {
 							if (
 								(source as pulumi.asset.FileAsset | pulumi.asset.FileArchive)
 									.path
@@ -111,10 +109,10 @@ export class SudoCopyToRemote extends pulumi.ComponentResource {
 								).path;
 
 								if (statSync(p).isDirectory()) {
-									return `mkdir -p ${remotePath} && cp -rf ${tmpFolder}/* ${remotePath} && rm -rf ${tmpFolder}`;
+									return `mkdir -p ${remotePath} && cp -rf ${_tmpFolder}/* ${remotePath} && rm -rf ${_tmpFolder}`;
 								} else {
 									// Per pulumi-command code, if the path is an existing dir for a file, we insert it.  Otherwise we treat the path as a file
-									return `if [ -d ${remotePath} ]; then cp -rf ${tmpFolder}/* ${remotePath}; else mv -f ${tmpFolder}/${basename(p)} ${remotePath}; fi && rm -rf ${tmpFolder}`;
+									return `if [ -d ${remotePath} ]; then cp -rf ${_tmpFolder}/* ${remotePath}; else mv -f ${_tmpFolder}/${basename(p)} ${remotePath}; fi && rm -rf ${_tmpFolder}`;
 								}
 							} else {
 								throw new Error(

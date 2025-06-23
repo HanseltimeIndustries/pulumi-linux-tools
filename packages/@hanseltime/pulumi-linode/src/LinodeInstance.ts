@@ -1,19 +1,20 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as linode from "@pulumi/linode";
-import { remote, types } from "@pulumi/command";
-import { VLAN } from "./vlan";
+import { CopyableAsset } from "@hanseltime/pulumi-file-utils";
 import {
 	LinuxUser,
 	SSHDConfig,
 	SudoCopyToRemote,
 } from "@hanseltime/pulumi-linux";
+import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import { OutputDependency } from "@hanseltime/pulumi-utils";
+import type { types } from "@pulumi/command";
+import { remote } from "@pulumi/command";
+import * as linode from "@pulumi/linode";
+import * as pulumi from "@pulumi/pulumi";
+import { createHash } from "crypto";
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { isAbsolute, join } from "path";
-import { shellStrings } from "@hanseltime/pulumi-linux-base";
 import { getLinodeInfoByLabel, tagLinode } from "./linodeApi";
-import { createHash } from "crypto";
-import { CopyableAsset } from "@hanseltime/pulumi-file-utils";
-import { OutputDependency } from "@hanseltime/pulumi-utils";
+import type { VLAN } from "./vlan";
 
 const AUTOMATION_LABEL_PREFIX = "hanseltime-pulumi-linode-automation-";
 const AUTOMATION_USER_TEMP_DIR = "sudo-copy-tmp";
@@ -92,6 +93,9 @@ interface LinodeInstanceArgs
 	};
 	vlan?: {
 		network: VLAN;
+		/**
+		 * The ip of this specific machine on that VLAN
+		 */
 		ip: pulumi.Input<string>;
 	};
 	/**
@@ -185,11 +189,14 @@ export class LinodeInstance extends pulumi.ComponentResource {
 				],
 				tags: pulumi
 					.output({
-						automationTag,
+						automationTagIn: automationTag,
 						tags: args.tags,
 					})
-					.apply(({ automationTag, tags }) => {
-						return [...(tags ?? []), ...(automationTag ? [automationTag] : [])];
+					.apply(({ automationTagIn, tags }) => {
+						return [
+							...(tags ?? []),
+							...(automationTagIn ? [automationTagIn] : []),
+						];
 					}),
 			},
 			{
@@ -200,37 +207,37 @@ export class LinodeInstance extends pulumi.ComponentResource {
 
 		const automationUserName = pulumi
 			.output({
-				automationTag,
+				automationTagIn: automationTag,
 				automationName:
 					args.automationUser.name ?? this.createRandomAutomationUserName(),
 			})
-			.apply(({ automationTag, automationName }) => {
-				if (automationTag) {
-					return automationTag.replace(AUTOMATION_LABEL_PREFIX, "");
+			.apply(({ automationTagIn, automationName }) => {
+				if (automationTagIn) {
+					return automationTagIn.replace(AUTOMATION_LABEL_PREFIX, "");
 				}
 				return automationName;
 			});
 
 		const connection = pulumi
 			.output({
-				automationTag,
-				automationUserName,
+				automationTagIn: automationTag,
+				automationUserNameIn: automationUserName,
 				ipAddress: instance.ipAddress,
 				privateKey: pulumi.secret(args.sshKey),
 				privateKeyPassword: pulumi.secret(args.sshKeyPassword),
 			})
 			.apply(
 				async ({
-					automationTag,
-					automationUserName,
+					automationTagIn,
+					automationUserNameIn,
 					ipAddress,
 					privateKey,
 					privateKeyPassword,
 				}) => {
-					if (automationTag) {
+					if (automationTagIn) {
 						return {
 							host: ipAddress,
-							user: automationUserName,
+							user: automationUserNameIn,
 							privateKey,
 							privateKeyPassword,
 						};
@@ -264,8 +271,8 @@ export class LinodeInstance extends pulumi.ComponentResource {
 
 		const automationUserPropsConneciton = pulumi
 			.output({
-				automationTag,
-				automationUserName,
+				automationTagIn: automationTag,
+				automationUserNameIn: automationUserName,
 				ipAddress: instance.ipAddress,
 				privateKey: pulumi.secret(args.sshKey),
 				privateKeyPassword: pulumi.secret(args.sshKeyPassword),
@@ -273,25 +280,25 @@ export class LinodeInstance extends pulumi.ComponentResource {
 			})
 			.apply(
 				async ({
-					automationTag,
-					automationUserName,
+					automationTagIn,
+					automationUserNameIn,
 					ipAddress,
 					privateKey,
 					privateKeyPassword,
 					userPassword,
 				}) => {
 					// If there's an automation tag then we've already added these keys and will use keys
-					if (automationTag) {
+					if (automationTagIn) {
 						return {
 							host: ipAddress,
-							user: automationUserName,
+							user: automationUserNameIn,
 							privateKey,
 							privateKeyPassword,
 						};
 					} else {
 						return {
 							host: ipAddress,
-							user: automationUserName,
+							user: automationUserNameIn,
 							password: userPassword,
 						};
 					}
@@ -330,16 +337,16 @@ export class LinodeInstance extends pulumi.ComponentResource {
 			{
 				output: pulumi
 					.output({
-						name: automationUserName,
+						nameIn: automationUserName,
 						id: instance.id,
-						automationTag,
+						automationTagIn: automationTag,
 						// We add it here to ensure a dependency on there being valid ssh keys
 						_stdout: addAutomationSSHKeys.stdout,
 					})
-					.apply(async ({ name, id, automationTag }) => {
-						if (!automationTag) {
+					.apply(async ({ nameIn, id, automationTagIn }) => {
+						if (!automationTagIn) {
 							await tagLinode(
-								`${AUTOMATION_LABEL_PREFIX}${name}`,
+								`${AUTOMATION_LABEL_PREFIX}${nameIn}`,
 								parseInt(id),
 							);
 						}
@@ -358,14 +365,14 @@ export class LinodeInstance extends pulumi.ComponentResource {
 		this.automationUserConnection = pulumi
 			.output({
 				ipAddress: instance.ipAddress,
-				name: automationUser.userName,
+				nameIn: automationUser.userName,
 				privateKey: args.sshKey,
 				privateKeyPassword: args.sshKeyPassword,
 			})
-			.apply(({ ipAddress, name, privateKey, privateKeyPassword }) => {
+			.apply(({ ipAddress, nameIn, privateKey, privateKeyPassword }) => {
 				return {
 					host: ipAddress,
-					user: name,
+					user: nameIn,
 					privateKey,
 					privateKeyPassword,
 				};
@@ -463,8 +470,8 @@ export class LinodeInstance extends pulumi.ComponentResource {
 		},
 	) {
 		const { sshKeys, userHomeDir, connection } = args;
-		pulumi.output(userName).apply((userName) => {
-			const dir = join(this.tmpDir, `linodeinstance`, this.name, userName);
+		pulumi.output(userName).apply((userNameIn) => {
+			const dir = join(this.tmpDir, `linodeinstance`, this.name, userNameIn);
 			const pubDir = join(dir, "public_keys");
 			if (existsSync(pubDir)) {
 				rmSync(pubDir, {
@@ -475,9 +482,9 @@ export class LinodeInstance extends pulumi.ComponentResource {
 			return pubDir;
 		});
 		const publicKeysAsset = CopyableAsset.fromParent(this, `${name}-ssh-keys`, {
-			asset: pulumi.output(sshKeys).apply((sshKeys) => {
+			asset: pulumi.output(sshKeys).apply((sshKeysIn) => {
 				return new pulumi.asset.AssetArchive(
-					sshKeys.reduce((assetMap, key) => {
+					sshKeysIn.reduce((assetMap, key) => {
 						assetMap[key.name] =
 							typeof key.key === "string"
 								? new pulumi.asset.StringAsset(key.key)

@@ -1,21 +1,30 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.0.4/schema.json",
 	"vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": ["dist/*", "site/*", "esm-packages.json"]
+		"includes": ["**", "!**/dist/*", "!**/site/*", "!**/esm-packages.json"]
 	},
 	"formatter": { "enabled": true, "indentStyle": "tab" },
-	"organizeImports": { "enabled": true },
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"recommended": false,
+			"nursery": {
+				"noShadow": "error"
+			},
 			"complexity": {
 				"noExtraBooleanCast": "error",
-				"noMultipleSpacesInRegularExpressionLiterals": "error",
-				"noUselessCatch": "error",
-				"noWith": "error"
+				"noAdjacentSpacesInRegex": "error",
+				"noUselessCatch": "error"
 			},
 			"correctness": {
 				"noConstAssign": "error",
@@ -43,6 +52,15 @@
 				"useValidForDirection": "error",
 				"useYield": "error"
 			},
+			"style": {
+				"useImportType": {
+					"level": "error",
+					"fix": "safe",
+					"options": {
+						"style": "separatedType"
+					}
+				}
+			},
 			"suspicious": {
 				"noAssignInExpressions": "error",
 				"noAsyncPromiseExecutor": "error",
@@ -66,20 +84,24 @@
 				"noShadowRestrictedNames": "error",
 				"noSparseArray": "error",
 				"noUnsafeNegation": "error",
-				"useGetterReturn": "error",
-				"useValidTypeof": "error"
+				"useGetterReturn": "error"
 			}
 		},
-		"ignore": [".yarn/**/*", "dist/**/*", "node_modules/**/*"]
+		"includes": [
+			"**",
+			"!**/.yarn/**/*",
+			"!**/dist/**/*",
+			"!**/node_modules/**/*"
+		]
 	},
 	"javascript": { "formatter": { "quoteStyle": "double" } },
 	"overrides": [
 		{
-			"include": [
-				"tsconfig.*.json",
-				"tsconfig.json",
-				"*.swcrc",
-				"templatesync.json"
+			"includes": [
+				"**/tsconfig.*.json",
+				"**/tsconfig.json",
+				"**/*.swcrc",
+				"**/templatesync.json"
 			],
 			"json": {
 				"parser": {
@@ -89,7 +111,7 @@
 			}
 		},
 		{
-			"include": ["*.spec.ts", "*.test.ts"],
+			"includes": ["**/*.spec.ts", "**/*.test.ts"],
 			"javascript": {
 				"globals": [
 					"afterEach",

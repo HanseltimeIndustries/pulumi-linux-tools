@@ -1,7 +1,7 @@
 # Your page
 
-[Raw docs](./docs/)
+[API docs](./docs/api)
 
-[TODO - put your Github Pages url here](TODO)
+<!-- [TODO - put your Github Pages url here](TODO) -->
 
 

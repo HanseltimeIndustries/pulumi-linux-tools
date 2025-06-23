@@ -1,8 +1,8 @@
 # @hanseltime/pulumi-linux-base
 
-[Raw docs](./docs/)
+[API docs](./docs/api)
 
-[TODO - put your Github Pages url here](TODO)
+<!-- [TODO - put your Github Pages url here](TODO) -->
 
 This is a typescript library used to support other packages that you are more likely to use.  In general, the functions
 and classes are DRY structures that help avoid repeating logic.

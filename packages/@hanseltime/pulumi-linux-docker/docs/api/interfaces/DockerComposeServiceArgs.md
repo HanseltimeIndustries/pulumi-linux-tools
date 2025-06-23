@@ -2,9 +2,9 @@
 
 ***
 
-[@hanseltime/pulumi-linux-docker](../README.md) / BuildDockerfileV2Args
+[@hanseltime/pulumi-linux-docker](../README.md) / DockerComposeServiceArgs
 
-# Interface: BuildDockerfileV2Args
+# Interface: DockerComposeServiceArgs
 
 If a resource is doing copy operations, some of them require the asset to be in
 a root-relative path

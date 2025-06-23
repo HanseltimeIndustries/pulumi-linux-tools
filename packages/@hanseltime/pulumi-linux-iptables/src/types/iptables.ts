@@ -1,4 +1,4 @@
-import { CIDR, IP } from "./ipset";
+import type { CIDR, IP } from "./ipset";
 
 /**
  *  This option specifies the packet matching table which the command should operate on. If the kernel is configured with automatic module loading, an attempt will be made to load the appropriate module for that table if it is not already there.

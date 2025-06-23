@@ -9,8 +9,12 @@
 Helper Class to declare and track a VLAN programmatically.
 
 You can use the getInterfaceEntry() method to create a Linode interface entry
-with the appropriate VLAN propeerties.  It will also keep track of any overlapped IP addresses
+with the appropriate VLAN properties.  It will also keep track of any overlapped IP addresses
 on the network
+
+## Extends
+
+- `Network`
 
 ## Constructors
 
@@ -32,11 +36,19 @@ on the network
 
 `VLAN`
 
+#### Inherited from
+
+`Network.constructor`
+
 ## Properties
 
 ### cidr
 
 > `readonly` **cidr**: `string`
+
+#### Inherited from
+
+`Network.cidr`
 
 ***
 
@@ -44,11 +56,19 @@ on the network
 
 > `readonly` **endIP**: `string`
 
+#### Inherited from
+
+`Network.endIP`
+
 ***
 
 ### maskNumber
 
 > `readonly` **maskNumber**: `string`
+
+#### Inherited from
+
+`Network.maskNumber`
 
 ***
 
@@ -56,13 +76,51 @@ on the network
 
 > `readonly` **name**: `string`
 
+#### Inherited from
+
+`Network.name`
+
 ***
 
 ### startIP
 
 > `readonly` **startIP**: `string`
 
+#### Inherited from
+
+`Network.startIP`
+
 ## Methods
+
+### claimIP()
+
+> **claimIP**(`ipAddress`, `name`): `void`
+
+Use this to claim the ipAddress within the network
+
+#### Parameters
+
+##### ipAddress
+
+`string`
+
+the ipaddress string to claim
+
+##### name
+
+`string`
+
+a readable name to identify which machine/interface is claiming this ip (for troubleshooting messages)
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+`Network.claimIP`
+
+***
 
 ### getInterfaceEntry()
 

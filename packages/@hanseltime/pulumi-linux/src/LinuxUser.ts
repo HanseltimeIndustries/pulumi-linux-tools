@@ -1,7 +1,8 @@
-import * as pulumi from "@pulumi/pulumi";
-import { remote, types } from "@pulumi/command";
-import { LIBRARY_PREFIX } from "./constants";
 import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import type { types } from "@pulumi/command";
+import { remote } from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import { LIBRARY_PREFIX } from "./constants";
 
 /**
  * A user that is added to the linux machine after the fact
@@ -50,9 +51,9 @@ export class LinuxUser extends pulumi.ComponentResource {
 			.output({
 				passwordlessSudo: args.passwordlessSudo,
 				groups: args.groups,
-				name: args.name,
+				nameIn: args.name,
 			})
-			.apply(({ passwordlessSudo, groups, name }) => {
+			.apply(({ passwordlessSudo, groups, nameIn }) => {
 				if (passwordlessSudo && !groups.includes("sudo")) {
 					throw new pulumi.InputPropertyError({
 						propertyPath: "passwordlessSudo",
@@ -61,17 +62,17 @@ export class LinuxUser extends pulumi.ComponentResource {
 					});
 				}
 
-				const sudoersRemove = `if [ -f "/etc/sudoers.d/${name}" ]; then rm "/etc/sudoers.d/${name}"; fi`;
+				const sudoersRemoveIn = `if [ -f "/etc/sudoers.d/${nameIn}" ]; then rm "/etc/sudoers.d/${nameIn}"; fi`;
 
 				if (passwordlessSudo) {
 					return {
-						sudoersRemove,
-						sudoersCreateOrupdate: `echo "${name} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${name}`,
+						sudoersRemove: sudoersRemoveIn,
+						sudoersCreateOrupdate: `echo "${nameIn} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${nameIn}`,
 					};
 				} else {
 					return {
-						sudoersRemove,
-						sudoersCreateOrupdate: `echo "" > /etc/sudoers.d/${name}`,
+						sudoersRemove: sudoersRemoveIn,
+						sudoersCreateOrupdate: `echo "" > /etc/sudoers.d/${nameIn}`,
 					};
 				}
 			});
@@ -79,17 +80,17 @@ export class LinuxUser extends pulumi.ComponentResource {
 		const extraDirs = pulumi
 			.output({
 				userHomeFolders: args.userHomeFolders,
-				userDir,
+				userDirIn: userDir,
 				userName: args.name,
 			})
-			.apply(({ userHomeFolders, userDir, userName }) => {
+			.apply(({ userHomeFolders, userDirIn, userName }) => {
 				if (!userHomeFolders) {
 					return "";
 				}
 				return userHomeFolders
 					.map(
 						(f) =>
-							`mkdir -p ${userDir}/${f} && chown ${userName}:${userName} ${userDir}/${f}`,
+							`mkdir -p ${userDirIn}/${f} && chown ${userName}:${userName} ${userDirIn}/${f}`,
 					)
 					.join(" && ");
 			});
@@ -97,11 +98,11 @@ export class LinuxUser extends pulumi.ComponentResource {
 		const sshDir = pulumi
 			.output({
 				canEditOwnSSH: args.canEditOwnSSH,
-				userDir,
+				userDirIn: userDir,
 				userName: args.name,
 			})
-			.apply(({ userDir, canEditOwnSSH, userName }) => {
-				return `mkdir -p ${userDir}/.ssh && touch ${userDir}/.ssh/authorized_keys ${canEditOwnSSH ? `&& chown -R ${userName}:${userName} ${userDir}/.ssh` : ""}`;
+			.apply(({ userDirIn, canEditOwnSSH, userName }) => {
+				return `mkdir -p ${userDirIn}/.ssh && touch ${userDirIn}/.ssh/authorized_keys ${canEditOwnSSH ? `&& chown -R ${userName}:${userName} ${userDirIn}/.ssh` : ""}`;
 			});
 
 		const _createUser = new remote.Command(
@@ -112,66 +113,66 @@ export class LinuxUser extends pulumi.ComponentResource {
 				create: shellStrings.asSudoOutput(
 					pulumi
 						.secret({
-							userDir,
-							name: args.name,
+							userDirIn: userDir,
+							nameIn: args.name,
 							password: args.password,
 							groups: args.groups,
-							sudoersCreateOrupdate,
-							extraDirs,
-							sshDir,
+							sudoersCreateOrupdateIn: sudoersCreateOrupdate,
+							extraDirsIn: extraDirs,
+							sshDirIn: sshDir,
 						})
 						// TODO - encrypt it too
 						.apply(
 							({
-								userDir,
-								name,
+								userDirIn,
+								nameIn,
 								password,
 								groups,
-								sudoersCreateOrupdate,
-								extraDirs,
-								sshDir,
+								sudoersCreateOrupdateIn,
+								extraDirsIn,
+								sshDirIn,
 							}) => {
-								return `useradd ${groups ? `-G ${groups.join(",")}` : ""} -m -d ${userDir} -p $(openssl passwd -6 "${password}") -s /bin/bash ${name} && ${sshDir} && ${sudoersCreateOrupdate} ${extraDirs ? `&& ${extraDirs}` : ""}`;
+								return `useradd ${groups ? `-G ${groups.join(",")}` : ""} -m -d ${userDirIn} -p $(openssl passwd -6 "${password}") -s /bin/bash ${nameIn} && ${sshDirIn} && ${sudoersCreateOrupdateIn} ${extraDirsIn ? `&& ${extraDirsIn}` : ""}`;
 							},
 						),
 				),
 				update: shellStrings.asSudoOutput(
 					pulumi
 						.secret({
-							userDir,
-							name: args.name,
+							userDirIn: userDir,
+							nameIn: args.name,
 							password: args.password,
 							groups: args.groups,
-							sudoersCreateOrupdate,
-							extraDirs,
-							sshDir,
+							sudoersCreateOrupdateIn: sudoersCreateOrupdate,
+							extraDirsIn: extraDirs,
+							sshDirIn: sshDir,
 						})
 						.apply(
 							({
-								userDir,
-								name,
+								userDirIn,
+								nameIn,
 								password,
 								groups,
-								sudoersCreateOrupdate,
-								extraDirs,
-								sshDir,
+								sudoersCreateOrupdateIn,
+								extraDirsIn,
+								sshDirIn,
 							}) =>
-								`usermod ${groups ? `-G ${groups.join(",")}` : ""} -m -d ${userDir} -p $(openssl passwd -6 "${password}") ${name} && ${sshDir} && ${sudoersCreateOrupdate} ${extraDirs ? `&& ${extraDirs}` : ""}`,
+								`usermod ${groups ? `-G ${groups.join(",")}` : ""} -m -d ${userDirIn} -p $(openssl passwd -6 "${password}") ${nameIn} && ${sshDirIn} && ${sudoersCreateOrupdateIn} ${extraDirsIn ? `&& ${extraDirsIn}` : ""}`,
 						),
 				),
 				// TODO: this is not a complete delete since we aren't cleaning up resources and rebuilding won't create the same id
 				delete: shellStrings.asSudoOutput(
 					pulumi
 						.output({
-							name: args.name,
-							sudoersRemove,
+							nameIn: args.name,
+							sudoersRemoveIn: sudoersRemove,
 							connection: args.connection,
 						})
-						.apply(({ name, sudoersRemove, connection }) => {
-							if (name === connection.user) {
-								return `echo "Skipping deletion of ${name} since it is expected to be the automation user and would deadlock"`;
+						.apply(({ nameIn, sudoersRemoveIn, connection }) => {
+							if (nameIn === connection.user) {
+								return `echo "Skipping deletion of ${nameIn} since it is expected to be the automation user and would deadlock"`;
 							}
-							return `userdel ${name} && ${sudoersRemove}`;
+							return `userdel ${nameIn} && ${sudoersRemoveIn}`;
 						}),
 				),
 			},

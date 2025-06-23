@@ -1,9 +1,10 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as std from "@pulumi/std";
-import { join } from "path";
+import { CopyableAsset } from "@hanseltime/pulumi-file-utils";
 import { LinodeInstance } from "@hanseltime/pulumi-linode";
-import { homedir } from "os";
-import { readFileSync } from "fs";
+import {
+	DockerComposeService,
+	DockerDeployType,
+	DockerInstall,
+} from "@hanseltime/pulumi-linux-docker";
 import {
 	IpSetResource,
 	IpTablesChain,
@@ -11,19 +12,22 @@ import {
 	IpTablesInstall,
 	IpTablesSave,
 } from "@hanseltime/pulumi-linux-iptables";
+import { TraefikRouteRule } from "@hanseltime/traefik";
+import * as pulumi from "@pulumi/pulumi";
+import * as std from "@pulumi/std";
+import { readFileSync } from "fs";
+import { dump } from "js-yaml";
+import { homedir } from "os";
+import { join } from "path";
 import {
 	blacklistV4,
 	blacklistV6,
 	globalBlockIpSetIpv4,
 	globalBlockIpSetIpv6,
 } from "./iptables";
-import {
-	DockerComposeService,
-	DockerDeployType,
-	DockerInstall,
-} from "@hanseltime/pulumi-linux-docker";
-import { TraefikRouteRule } from "@hanseltime/traefik";
-import { dump } from "js-yaml";
+
+// We are fine with risking a collision for a faster comparison of docker files
+CopyableAsset.setChangeDetectHashFunction(CopyableAsset.sha256AndLength);
 
 const config = new pulumi.Config();
 const REGION = config.require("linodeRegion");
@@ -63,12 +67,12 @@ const instance = new LinodeInstance("machinetls", {
 	region: REGION,
 	// Can be found by running linode-cli linodes types --json
 	type: "g6-nanode-1",
-	rootPass: config.require("rootPassword"),
+	rootPass: config.requireSecret("rootPassword"),
 	initialRootKey: initialRootKey1,
 	sshKey: deployPrivateKey,
 	sshKeyPassword: config.requireSecret("sshPassword"),
 	automationUser: {
-		password: pulumi.secret("newPassword"),
+		password: config.requireSecret("automationUserPassword"),
 		sshKeys: [
 			{
 				name: "cicd_key",
@@ -76,18 +80,7 @@ const instance = new LinodeInstance("machinetls", {
 			},
 		],
 	},
-	nonRootUsers: {
-		testDeploy: {
-			password: pulumi.secret("sometestpasssword"),
-			groups: ["sudo"],
-			sshKeys: [
-				{
-					name: "ops-admin-access",
-					key: initialRootKey1,
-				},
-			],
-		},
-	},
+	nonRootUsers: {},
 	tags: [],
 	// no vlan for this example, but it would be more secure if you could keep things in a vlan
 });

@@ -1,10 +1,10 @@
-import * as pulumi from "@pulumi/pulumi";
-import * as command from "@pulumi/command";
-import { ChangeSignature, PropsInputify } from "./pulumitypes";
-import { IpTablesChainArgs } from "./types";
-import { createChainCommands } from "./iptablesUtils";
-import { LIBRARY_PREFIX } from "./constants";
 import { shellStrings } from "@hanseltime/pulumi-linux-base";
+import * as command from "@pulumi/command";
+import * as pulumi from "@pulumi/pulumi";
+import { LIBRARY_PREFIX } from "./constants";
+import { createChainCommands } from "./iptablesUtils";
+import type { ChangeSignature, PropsInputify } from "./pulumitypes";
+import type { IpTablesChainArgs } from "./types";
 
 /**
  * This represents an entire iptables chain (in ipv6 and ipv4 to avoid chain name collisions long term), since tracking and replacing that chain requires us to know everything that's there so we can remove other pieces

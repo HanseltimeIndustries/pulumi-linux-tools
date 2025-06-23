@@ -1,4 +1,4 @@
-import {
+import type {
 	InvertableIpV4TablesProps,
 	InvertableIpV6TablesProps,
 	IPFamily,
@@ -84,6 +84,66 @@ function createChainCommandsForFamily(
 			: createFullDeleteCommand(base, name),
 		chainName: name,
 	};
+}
+
+/**
+ * Creates an iptables command to insert/append a rule and (optionally, will only add the rule if it does not exist)
+ *
+ * This is a good escape hatch if you need to insert iptables rules into something without controlling the whole chain.
+ * As an explicit example, this can be used by a wireguard server to ensure that we add iptables rules but also don't
+ * if say, the rule was persisted and already exists.
+ */
+export function createRuleCommand(options: {
+	/**
+	 * Where this rule is meant to be ipv6 or ipv4
+	 */
+	family: IPFamily;
+	/**
+	 * The iptables table to apply this to
+	 */
+	table: string;
+	/**
+	 * The chain within that table that we are inserting into
+	 */
+	chain: string;
+	/**
+	 * The specific rule that you would like to add
+	 */
+	rule: IpV4TablesRule | IpV6TablesRule;
+	/**
+	 * The method to perform the insert
+	 */
+	operator: "insert" | "append" | "delete";
+	/**
+	 * Will only apply the rule if it is not already within the chain
+	 */
+	onlyIfMissing: boolean;
+}) {
+	const base = createBaseCommand(options.family, options.table);
+	const rulePortion = `${options.chain} ${createRuleSpecCli(options.rule as IpV4TablesRule)}`;
+	let operator = "";
+	switch (options.operator) {
+		case "append":
+			operator = "-A";
+			break;
+		case "insert":
+			operator = "-I";
+			break;
+		case "delete":
+			operator = "-D";
+			break;
+		default:
+			throw new Error(`Unknown iptables rule operator: ${options.operator}`);
+	}
+	const createCmd = `${base} ${operator} ${rulePortion}`;
+	if (options.operator === "delete") {
+		// always check when we're deleting
+		return `if [ "$(${base} -C ${rulePortion} 2> /dev/null || echo 'notset')" != "notset" ]; then ${createCmd}; fi`;
+	}
+	if (options.onlyIfMissing) {
+		return `if [ "$(${base} -C ${rulePortion} 2> /dev/null || echo 'notset')" == "notset" ]; then ${createCmd}; fi`;
+	}
+	return createCmd;
 }
 
 export function createPortArgValue(portArg: number | [number, number]) {

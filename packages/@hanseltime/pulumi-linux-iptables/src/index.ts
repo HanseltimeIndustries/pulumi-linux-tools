@@ -1,8 +1,9 @@
-export * from "./types";
-export * from "./IpTablesInstall";
-export * from "./Ipset";
 export * from "./IpSetResource";
+export * from "./Ipset";
 export * from "./IpTablesChain";
 export * from "./IpTablesChainCreate";
-export * from "./IpTablesSave";
 export * from "./IpTablesHelper";
+export * from "./IpTablesInstall";
+export * from "./IpTablesSave";
+export { createRuleCommand, createRuleSpecCli } from "./iptablesUtils";
+export * from "./types";

@@ -1,4 +1,4 @@
-export * from "./types";
+export * from "./healthCheck";
 export * from "./labels";
 export * from "./TraefikRouteRule";
-export * from "./healthCheck";
+export * from "./types";
