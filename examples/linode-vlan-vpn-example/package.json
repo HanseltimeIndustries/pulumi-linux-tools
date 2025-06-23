@@ -1,0 +1,37 @@
+{
+	"name": "linode-vlan-vpn-example",
+	"main": "src/index.ts",
+	"scripts": {
+		"lint": "biome lint",
+		"format": "biome format",
+		"build": "tsc"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.0.4",
+		"@types/dot-object": "^2.1.6",
+		"@types/js-yaml": "^4.0.9",
+		"@types/node": "^20",
+		"tsx": "^4.19.4",
+		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"@hanseltime/compose-types": "^1.1.0",
+		"@hanseltime/pulumi-linode": "workspace:^",
+		"@hanseltime/pulumi-linux": "workspace:^",
+		"@hanseltime/pulumi-linux-docker": "workspace:^",
+		"@hanseltime/pulumi-linux-iptables": "workspace:^",
+		"@hanseltime/pulumi-linux-vpn": "workspace:^",
+		"@hanseltime/traefik": "workspace:^",
+		"@pulumi/command": "^1.0.3",
+		"@pulumi/linode": "^4.38.0",
+		"@pulumi/pulumi": "^3.158.0",
+		"@pulumi/std": "^2.2.0",
+		"dot-object": "^2.1.5",
+		"js-yaml": "^4.1.0",
+		"json-schema-to-typescript": "^15.0.4",
+		"parse-duration": "^2.1.4",
+		"tar": "^7.4.3"
+	},
+	"private": true,
+	"packageManager": "yarn@4.7.0"
+}
