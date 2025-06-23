@@ -7,6 +7,7 @@
 ## Classes
 
 - [LinuxUser](classes/LinuxUser.md)
+- [Network](classes/Network.md)
 - [SSHDConfig](classes/SSHDConfig.md)
 - [SudoCopyToRemote](classes/SudoCopyToRemote.md)
 

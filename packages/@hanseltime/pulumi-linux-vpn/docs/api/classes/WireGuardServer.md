@@ -1,47 +1,20 @@
-[**@hanseltime/pulumi-linux-docker**](../README.md)
+[**@hanseltime/pulumi-linux-vpn**](../README.md)
 
 ***
 
-[@hanseltime/pulumi-linux-docker](../README.md) / DockerComposeService
+[@hanseltime/pulumi-linux-vpn](../README.md) / WireGuardServer
 
-# Class: DockerComposeService
-
-A resource that is meant for smaller-scale rolling deployments via docker-compose.
-
-Note: this type of resource and set up pales in comparison to something like k8s.  This exists
-      for you to trade off the complexity of understanding K8s for manual triage via SSH and
-      a familiarity with docker-compose.  If you anticipate scale, you will ultimately move past
-      this set of resources in the long-term.
-
-Each one of these components represents a separate docker compose file with a single
-service in it.  This creates a standardized set of folders around the compose file
-so that it can be run with updates on a single local machine.
-
-Folder structure:
-/<user root>/docker/<service name>/
-   compose.yml - maintained by this resource
-   mnt/
-     <name> - any mounted directories or files you name and provide here
-   build/ - the entire build.context archive that you provide (including Dockerfile)
-
-/var/pulumi-docker/.secrets/<service name> - contains secret files that will be mounted into the container
-
-Deployment types:
-		TODO -
+# Class: WireGuardServer
 
 ## Extends
 
 - `ComponentResource`
 
-## Implements
-
-- [`WaitOnChildren`](../interfaces/WaitOnChildren.md)
-
 ## Constructors
 
 ### Constructor
 
-> **new DockerComposeService**(`name`, `args`, `opts?`): `DockerComposeService`
+> **new WireGuardServer**(`name`, `args`, `opts?`): `WireGuardServer`
 
 #### Parameters
 
@@ -51,7 +24,7 @@ Deployment types:
 
 ##### args
 
-[`DockerComposeServiceArgs`](../interfaces/DockerComposeServiceArgs.md)
+[`WireGuardServerArgs`](../interfaces/WireGuardServerArgs.md)
 
 ##### opts?
 
@@ -59,7 +32,7 @@ Deployment types:
 
 #### Returns
 
-`DockerComposeService`
+`WireGuardServer`
 
 #### Overrides
 
@@ -67,15 +40,40 @@ Deployment types:
 
 ## Properties
 
-### last
+### ipTablesRules
 
-> **last**: `Input`\<`Resource`\>
+> `readonly` **ipTablesRules**: `Output`\<\{ `filter`: \{ `forward`: `IpV4TablesRule`[]; \}; `nat`: \{ `postrouting`: `IpV4TablesRule`[]; \}; \}\>
 
-The last child that should be dependedOn
+These are iptable rules that can (and should) be added to any IpTablesChain
+resources since those resources will rewrite that chain on update and using PostUp
+may not be enough in that regard.
 
-#### Implementation of
+***
 
-[`WaitOnChildren`](../interfaces/WaitOnChildren.md).[`last`](../interfaces/WaitOnChildren.md#last)
+### peersConfig
+
+> `readonly` **peersConfig**: `Output`\<`object`[]\>
+
+This is the peers configuration option as an output
+
+Use the peer look up methods over this on the wireguard server resource
+
+***
+
+### port
+
+> `readonly` **port**: `OutputInstance`\<`number`\>
+
+The port this server is listening on
+
+***
+
+### publicKey
+
+> `readonly` **publicKey**: `Output`\<`string`\>
+
+The public key of the vpn server - mainly meant to be used so that you can output it from the stack and
+use it for construction of wireguard client configurations
 
 ***
 
@@ -91,6 +89,86 @@ and after deployments.
 `pulumi.ComponentResource.urn`
 
 ## Methods
+
+### createPublicInternetForwardRoutingRule()
+
+> **createPublicInternetForwardRoutingRule**(`publicInterface`, `wgInterface`): `object`
+
+#### Parameters
+
+##### publicInterface
+
+`string`
+
+##### wgInterface
+
+`string`
+
+#### Returns
+
+`object`
+
+##### down
+
+> **down**: `string`
+
+##### forwardRules
+
+> **forwardRules**: `IpV4TablesRule`[]
+
+##### natRules
+
+> **natRules**: `IpV4TablesRule`[]
+
+##### up
+
+> **up**: `string`
+
+***
+
+### createVlanForwardRoutingRule()
+
+> **createVlanForwardRoutingRule**(`vlanInterface`, `vpnCIDR`, `vlanCIDR`, `wgInterface`): `object`
+
+#### Parameters
+
+##### vlanInterface
+
+`string`
+
+##### vpnCIDR
+
+`string`
+
+##### vlanCIDR
+
+`string`
+
+##### wgInterface
+
+`string`
+
+#### Returns
+
+`object`
+
+##### down
+
+> **down**: `string`
+
+##### forwardRules
+
+> **forwardRules**: `IpV4TablesRule`[]
+
+##### natRules
+
+> **natRules**: `IpV4TablesRule`[]
+
+##### up
+
+> **up**: `string`
+
+***
 
 ### getData()
 
@@ -110,21 +188,45 @@ immediately available in a derived class's constructor after the
 
 ***
 
-### getMaxWaitTimeSeconds()
+### getPeerAddress()
 
-> **getMaxWaitTimeSeconds**(`healthcheck`): `Promise`\<`number`\>
+> **getPeerAddress**(`name`): `Output`\<`string`\>
+
+Simple helper method for getting the allowed IP CIDR from a peer name
+that would go in the config as:
+[Interface]
+Address = <here>
 
 #### Parameters
 
-##### healthcheck
+##### name
 
-\{ `disable?`: `Input`\<`Input`\<`string`\> \| `Input`\<`undefined`\> \| `Input`\<`false`\> \| `Input`\<`true`\>\>; `interval?`: `Input`\<`Input`\<`string`\> \| `Input`\<`undefined`\>\>; `retries?`: `Input`\<`Input`\<`string`\> \| `Input`\<`number`\> \| `Input`\<`undefined`\>\>; `start_interval?`: `Input`\<`Input`\<`string`\> \| `Input`\<`undefined`\>\>; `start_period?`: `Input`\<`Input`\<`string`\> \| `Input`\<`undefined`\>\>; `test`: `Input`\<`Input`\<`string`\> \| `Input`\<`undefined`\> \| `Input`\<`Input`\<`string`\>[]\>\>; `timeout?`: `Input`\<`Input`\<`string`\> \| `Input`\<`undefined`\>\>; \} | `"NO_SHELL"`
+`string`
 
 #### Returns
 
-`Promise`\<`number`\>
+`Output`\<`string`\>
 
--1 if the healthcheck is no shell
+***
+
+### getPeerPreSharedKey()
+
+> **getPeerPreSharedKey**(`name`): `Output`\<`string`\>
+
+Simple helper method for getting the allowed IP CIDR from a peer name
+that would go in the config as:
+[Peer]
+PresharedKey = <here>
+
+#### Parameters
+
+##### name
+
+`string`
+
+#### Returns
+
+`Output`\<`string`\>
 
 ***
 

@@ -1,8 +1,8 @@
 # @hanseltime/pulumi-linux-vpn
 
-[Raw docs](./docs/)
+[API docs](./docs/api)
 
-[TODO - put your Github Pages url here](TODO)
+<!-- [TODO - put your Github Pages url here](TODO) -->
 
 This is a typescript collection of pulumi resources that use SSH and SFTP to establish baseline resources for a linux 
 (deb/ubuntu distro) machine that you would want to put a VPN on.  Note, right now, this just configures wireguard.  Contributions

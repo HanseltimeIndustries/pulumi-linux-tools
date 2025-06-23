@@ -17,7 +17,7 @@
 
 ## Interfaces
 
-- [BuildDockerfileV2Args](interfaces/BuildDockerfileV2Args.md)
+- [DockerComposeServiceArgs](interfaces/DockerComposeServiceArgs.md)
 - [TempCopyDirArgs](interfaces/TempCopyDirArgs.md)
 - [WaitOnChildren](interfaces/WaitOnChildren.md)
 

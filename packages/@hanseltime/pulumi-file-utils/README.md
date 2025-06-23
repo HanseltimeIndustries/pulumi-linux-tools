@@ -1,8 +1,8 @@
 # @hanseltime/pulumi-file-utils
 
-[Raw docs](./docs/)
+[API docs](./docs/api)
 
-[TODO - put your Github Pages url here](TODO)
+<!-- [TODO - put your Github Pages url here](TODO) -->
 
 This is a typescript library that provides a few helper utilities that helps with using file assets on 
 a machine.

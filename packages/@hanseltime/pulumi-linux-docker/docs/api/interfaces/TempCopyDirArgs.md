@@ -11,7 +11,7 @@ a root-relative path
 
 ## Extended by
 
-- [`BuildDockerfileV2Args`](BuildDockerfileV2Args.md)
+- [`DockerComposeServiceArgs`](DockerComposeServiceArgs.md)
 
 ## Properties
 

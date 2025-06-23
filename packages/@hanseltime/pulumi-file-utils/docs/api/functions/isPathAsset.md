@@ -6,7 +6,7 @@
 
 # Function: isPathAsset()
 
-> **isPathAsset**(`asset`): asset is FileArchive \| FileAsset
+> **isPathAsset**(`asset`): asset is FileAsset \| FileArchive
 
 ## Parameters
 
@@ -16,4 +16,4 @@
 
 ## Returns
 
-asset is FileArchive \| FileAsset
+asset is FileAsset \| FileArchive

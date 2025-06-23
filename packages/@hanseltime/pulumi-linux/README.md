@@ -1,8 +1,8 @@
 # @hanseltime/pulumi-linux
 
-[Raw docs](./docs/)
+[API docs](./docs/api)
 
-[TODO - put your Github Pages url here](TODO)
+<!-- [TODO - put your Github Pages url here](TODO) -->
 
 This is a typescript collection of pulumi resources that use SSH and SFTP to establish baseline resources for a linux 
 (deb/ubuntu distro) machine that you are able to SSH into.

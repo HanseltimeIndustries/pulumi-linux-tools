@@ -1,8 +1,8 @@
 # @hanseltime/pulumi-linode
 
-[Raw docs](./docs/)
+[API docs](./docs/api)
 
-[TODO - put your Github Pages url here](TODO)
+<!-- [TODO - put your Github Pages url here](TODO) -->
 
 This is a typescript collection of pulumi resources that use SSH and SFTP to establish baseline resources for various Linode
 patterns that go beyond the initial configuration of the `@pulumi/linode` provider libraries.
