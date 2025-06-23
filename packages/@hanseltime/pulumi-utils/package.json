@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-utils",
-	"version": "1.0.6",
+	"version": "1.1.0",
 	"description": "A utility library that adds some utilitity classes for pulumi typescript",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",

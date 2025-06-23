@@ -1,5 +1,11 @@
 # @hanseltime/pulumi-linux-base
 
+## 1.1.0
+
+### Minor Changes
+
+- 0876b45: Applying more strict lint rules from biomev2 including fixing shadowing
+
 ## 1.0.6
 
 ### Patch Changes

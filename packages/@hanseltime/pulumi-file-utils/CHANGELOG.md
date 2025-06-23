@@ -1,5 +1,12 @@
 # @hanseltime/pulumi-file-utils
 
+## 1.1.0
+
+### Minor Changes
+
+- eb929b6: Fixing CopyableAsset to calculate deterministic hashes and applying it to build contexts to avoid unncessary replacements
+- 0876b45: Applying more strict lint rules from biomev2 including fixing shadowing
+
 ## 1.0.6
 
 ### Patch Changes

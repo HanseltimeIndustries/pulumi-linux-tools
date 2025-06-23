@@ -1,5 +1,11 @@
 # @hanseltime/traefik
 
+## 0.2.0
+
+### Minor Changes
+
+- 0876b45: Applying more strict lint rules from biomev2 including fixing shadowing
+
 ## 0.1.6
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @hanseltime/pulumi-linode
 
+## 0.2.0
+
+### Minor Changes
+
+- 0876b45: Applying more strict lint rules from biomev2 including fixing shadowing
+
+### Patch Changes
+
+- Updated dependencies [0876b45]
+  - @hanseltime/pulumi-linux@1.1.0
+  - @hanseltime/pulumi-linux-base@1.1.0
+  - @hanseltime/pulumi-utils@1.1.0
+
 ## 0.1.6
 
 ### Patch Changes
