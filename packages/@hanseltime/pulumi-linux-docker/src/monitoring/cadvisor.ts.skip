@@ -1,12 +1,14 @@
-import { DockerComposeService, DockerComposeServiceArgs } from "../DockerComposeService";
+import type * as pulumi from "@pulumi/pulumi";
+import type { DockerComposeServiceArgs } from "../DockerComposeService";
+import { DockerComposeService, } from "../DockerComposeService";
 import { DefaultInternalNetworkRange } from "../DockerInstall";
 import { DockerDeployType } from '../types'
-import * as pulumi from "@pulumi/pulumi";
 
 interface CAdvisorServiceArgs {
     connection: DockerComposeServiceArgs["connection"]
     homeDir: DockerComposeServiceArgs["homeDir"]
     tmpCopyDir: DockerComposeServiceArgs["tmpCopyDir"]
+	usernsRemap: DockerComposeServiceArgs['usernsRemap']
 }
 
 export class CAdvisorService extends DockerComposeService {
@@ -17,12 +19,13 @@ export class CAdvisorService extends DockerComposeService {
 	) {
         const dockerSocketProxyService = 'dockersocketproxy'
 		super(name, {
-			usernsRemap: this.usernsRemap,
-			name: 'cadvisor',
-			deployType: DockerDeployType.Replace,
+			usernsRemap: args.usernsRemap,
 			connection: args.connection,
 			homeDir: args.homeDir,
 			tmpCopyDir: args.tmpCopyDir,
+			name: 'cadvisor',
+			deployType: DockerDeployType.Replace,
+
 			accessDockerSocket: {
 				name: dockerSocketProxyService,
 				readonly: true,
@@ -44,8 +47,8 @@ export class CAdvisorService extends DockerComposeService {
 					// For now just use the defaults
 				},
                 command: [
-                    `tcp://${dockerSocketProxyServiceName}:2375`
-                ]
+                    `tcp://${dockerSocketProxyService}:2375`
+                ],
                 volumes: [
                     '/:/rootfs:ro',
                     '/var/run:/var/run:ro',
@@ -54,6 +57,6 @@ export class CAdvisorService extends DockerComposeService {
                 ]
 				user: "ROOT_USER",
 			},
-		});
+		}, options);
 	}
 }

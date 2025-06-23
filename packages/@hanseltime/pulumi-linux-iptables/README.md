@@ -106,6 +106,10 @@ project:
 globalBlockIpSetIpv4.add('111.111.111.23')
 ```
 
+## Helper PredefinedRules
+
+You can use the `PredefinedRules` class's static methods to create common iptables rule configurations rather than having to remember it each time.  Please look at the class itself or its api documentation. 
+
 ## IpSetResource
 
 Now that we have an IpSet helper, we need to actually have the linux machine create the ip set.  To do that, we supply

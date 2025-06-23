@@ -6,4 +6,5 @@ export * from "./IpTablesHelper";
 export * from "./IpTablesInstall";
 export * from "./IpTablesSave";
 export { createRuleCommand, createRuleSpecCli } from "./iptablesUtils";
+export * from "./PredefinedRules";
 export * from "./types";
