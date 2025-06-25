@@ -476,7 +476,7 @@ export class WireGuardServer extends pulumi.ComponentResource {
 			inInterface: publicInterface,
 			outInterface: wgInterface,
 			matchingModule: {
-				state: "--state RELATED,ESTABLISHED",
+				conntrack: "--ctstate RELATED,ESTABLISHED",
 			},
 			jump: "ACCEPT",
 		};
@@ -555,7 +555,7 @@ export class WireGuardServer extends pulumi.ComponentResource {
 			inInterface: vlanInterface,
 			destination: vpnCIDR,
 			matchingModule: {
-				state: "--state RELATED,ESTABLISHED",
+				conntrack: "--ctstate RELATED,ESTABLISHED",
 			},
 			jump: "ACCEPT",
 		};

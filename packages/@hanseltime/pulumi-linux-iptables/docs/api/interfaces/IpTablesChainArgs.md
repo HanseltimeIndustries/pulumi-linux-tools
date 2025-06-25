@@ -35,6 +35,8 @@ the name fo the iptables chain
 
 All rules for the chain in iptables (ipv4)
 
+The order of the rules is the order of evaluation (i.e. 1 -> 2 -> 3)
+
 ***
 
 ### rulesIpV6
@@ -42,6 +44,8 @@ All rules for the chain in iptables (ipv4)
 > **rulesIpV6**: [`IpV6TablesRule`](IpV6TablesRule.md)[]
 
 All rules for the chain in iptables (ipv6)
+
+The order of the rules is the order of evaluation (i.e. 1 -> 2 -> 3)
 
 ***
 

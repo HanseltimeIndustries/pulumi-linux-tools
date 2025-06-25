@@ -171,7 +171,34 @@ export function createRuleSpecCli(rule: IpV4TablesRule | IpV6TablesRule) {
 			);
 		}
 	}
-	return (Object.keys(rule) as (keyof IpV4TablesRule | keyof IpV6TablesRule)[])
+	// We need to order some flags (like protocol and dport)
+	const keys = Object.keys(rule);
+	const destPortsIdx = keys.findIndex((k) => k === "destinationPorts");
+	const srcPortsIdx = keys.findIndex((k) => k === "sourcePorts");
+	if (srcPortsIdx >= 0 || destPortsIdx >= 0) {
+		let beforePortsIdx: number;
+		let portKey: string;
+		if (srcPortsIdx >= 0 && destPortsIdx >= 0) {
+			if (srcPortsIdx < destPortsIdx) {
+				beforePortsIdx = srcPortsIdx;
+				portKey = "sourcePorts";
+			} else {
+				beforePortsIdx = destPortsIdx;
+				portKey = "destinationPorts";
+			}
+		} else if (srcPortsIdx >= 0) {
+			beforePortsIdx = srcPortsIdx;
+			portKey = "sourcePorts";
+		} else {
+			beforePortsIdx = destPortsIdx;
+			portKey = "destinationPorts";
+		}
+
+		const protocolIdx = keys.findIndex((k) => k === "protocol");
+		keys[beforePortsIdx] = "protocol";
+		keys[protocolIdx] = portKey;
+	}
+	return (keys as (keyof IpV4TablesRule | keyof IpV6TablesRule)[])
 		.reduce((flags, prop) => {
 			switch (prop) {
 				case "destinationPorts":
