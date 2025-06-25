@@ -1,5 +1,11 @@
 # @hanseltime/pulumi-linux-iptables
 
+## 1.1.1
+
+### Patch Changes
+
+- 61d7bd5: Fixed ordering problem with ports and protocol and added PredefinedRules for egressOnly
+
 ## 1.1.0
 
 ### Minor Changes

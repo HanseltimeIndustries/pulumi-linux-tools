@@ -1,5 +1,12 @@
 # @hanseltime/pulumi-linux-docker
 
+## 1.1.1
+
+### Patch Changes
+
+- Updated dependencies [61d7bd5]
+  - @hanseltime/pulumi-linux-iptables@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes

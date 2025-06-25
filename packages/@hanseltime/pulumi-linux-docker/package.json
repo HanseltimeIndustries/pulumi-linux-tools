@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-linux-docker",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "pulumi TS component resources for docker deployments on a linux machine with SSH",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",
