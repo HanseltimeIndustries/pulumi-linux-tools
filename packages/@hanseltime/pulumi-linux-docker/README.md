@@ -1451,3 +1451,413 @@ As discussed in the `DockerInstall` resource sections, we require that you provi
 By default, a fresh docker installation lets any requests through, so you will need to supply your own appropriate firewall rules,
 with the assurance that the entire chain is maintained by this resource's firewall configuration.
 
+# Monitoring
+
+Setting up docker and docker compose gives us the extensibility of containers, but it does mean that we need to be able to monitor
+each container.
+
+This package provides some resources for setting up particular monitorining resources that work with our docker compose networking
+setup.
+
+Without using these resources, the basic paradigm is:
+
+```mermaid
+stateDiagram-v2
+    [*] --> MainNetwork
+    MainNetwork --> Containers
+    MonitoringNetwork --> ObservationTool
+    MonitoringNetwork --> Containers
+    Host --> HostContainers
+    DockerGateway --> ObservationTool
+    DockerGateway --> Host
+```
+
+Basically, each service that you run has a MainNetwork that it is a part of.  This might be the blue-green network, or the default
+docker compose network that the service containers are bound to.  Additionally, when you run an obersation tool, you run it in a docker
+compose network as well - the MonitoringNetwork.  Finally, you may also have host-bound containers (really something like nodeexporter
+that monitors the actual machine's statistics).
+
+In order to scan the metrics on these different services, we need to connect the services to the `MonitoringNetwork`
+and then have whatever ObservationTool you are using look up the services by service name, or container name if you have a service
+discovery tool (like `docker_sd_config` in prometheus).
+
+All `DockerComposeService` objects have a `monitoringNetwork` property that can be set to match the network of the Monitoring 
+`DockerComposeService` that you bring up and you should `dependOn` for the other services.  In the event of a host networked
+container (which should be rare), you will need to bind that service to the docker gateway interface.  If you have a standard
+`DockerInstall` setup, you can use `dockerInstall.defaultDockerGatewayIP` to expose a port like:
+
+```typescript
+ports: [
+   dockerInstall.defaultDockerGatewayIP.apply((gateway) => `${gateway}:9999:3000`),
+]
+```
+
+## PrometheusService
+
+**The service is a Replace deployment, and does not have any TLS set up as it is intended to be used over secure loopback/vlan networks.**
+
+This is a generic `DockerComposeService` that has a simplified interface and will take a javascript object for a prometheus
+configuration that will be mounted and referenced via prometheus.
+
+Consequently, this is mainly something that you will configure by the prometheus config, but you have limited access to service
+and mount related properties still.
+
+IMPORTANT - Prometheus does not have native TLS or user management.  If you expose this to the public internet (especially if you
+run it as a remote-write-receiver), you will be opening that server up to data corruption.  We recommend only opening the server
+within a network.
+
+Please see the API documentation for more information.
+
+### Agent Vs Server
+
+Prometheus introduced a far more performant way to write metrics via `remote_write` and its `agent` configuration.  This can be
+important if you are going to deploy containers on multiple machines.  In that case, you would want a single prometheus server
+somewhere that is storing the data and multiple lightweight prometheus containers that simple find data on the machine they're on
+and then pass it to the central server.
+
+The `PrometheusService` `mode` option will set up a few basic cli arguments for you (specifically which data storage options to use),
+and will automatically add `--agent`.  You are still required to add the `remote_write:` configuration option for the prometheus 
+configuration for an agent:
+
+```typescript
+   prometheusConfig: {
+      remote_write: [
+         {
+            url: myCentralUrl,
+         },
+      ],
+   },
+```
+
+If you are configuring a server that you want to be push to by prometheus agents (or other remote_write compatible agents),
+you will still need to provide the requisite cliFlag `--web.enable-remote-write-receiver`
+
+```typescript
+    cliFlags: ["--web.enable-remote-write-receiver"],
+```
+
+### Prometheus Configuration that requires restart
+
+While some prometheus configurations for things like scrape_interval can be reloads via the `--web.lifecyle` flag, there are certainly
+some values in a prometheus configuration that would require the application to be restarted.  For instance, if you update docker service
+discovery, nothing will be updated until the server is restarted.
+
+The solution to this is that we hash certain portions of the prometheus configuration that was provided and supply it as a label, that way
+the service will be brought down and back up to force the config to be loaded.  This resource does that for a few known changes, but not all.  If you want to ensure that changes to a configuration require and update, you can provider your own `configKeysForReplace` function.
+
+This example is returning any `scrape_config` that has a `job_name` of `oh no`:
+
+```typescript
+   configKeysForReplace: (promConfig) => {
+      if (promConfig?.scrape_configs) {
+         return promConfig.scrape_configs.filter((cfg) => cfg.job_name === 'oh no')
+      }
+      return [] 
+   }
+```
+
+## PrometheusServiceWithSD
+
+**The service is a Replace deployment, and does not have any TLS set up as it is intended to be used over secure loopback/vlan networks.**
+
+This is an abstraction on top of `PrometheusService` that provides some options for configuring docker service discovery.  This
+adds support and configuration for the docker socket proxy that we use for docker socket access while also adding relabeling
+to support:
+
+* `prometheus.io/port` label specifying the port - This is the only way to get host-bound containers to be scraped
+* `requireScrapeLabel` property allows you to filter and only scrape `prometheus.io/scrape=true` labels (off by default)
+* For non-host containers, this will use the `prometheus.io/port` or the private port if no label is found
+
+Please see the API documentation for more information.
+
+## CAdvisorService
+
+This is a `DockerComposeService` with some specific configurations to ensure that your cadvisor scrapes your Docker containers
+and exposes your metrics.  This is an opinionated setup and if it does not match your needs, you can copy and modify the settings
+for the actual DockerComposeService.
+
+**The service is a Replace deployment, and does not have any TLS set up as it is intended to be used over secure loopback/vlan networks.**
+
+Importantly, we have an `expose` property that is meant to make you think about exposure of the port.  We do not recommend exposing
+your cadvisor container to the public internet since it has elevated privileges.  Instead, you should expose it to interfaces that
+you control (by IP).  (Note that, by joining it to the monitoringnetwork via the `monitoringNetwork` property should make your observation
+tool able to scrape if via `service name` lookup, so this is more about being able to connect to the UI for troubleshooting).
+
+Some examples:
+
+```typescript
+// Just expose this on the loopback interface
+expose: {
+   port: 9999,
+   interfacesIp: ['127.0.0.1']
+}
+```
+
+Importantly, your goal is to be able to see the cadvisor ui from within a safe network but not publicly.  In the first scenario,
+you would be SSH'ing onto the machine and running curls (less valuable since the UI is html).  In the second scenario, you 
+would be connecting to your VLAN via a VPN and then reaching out to the machine's VLAN IP and port.
+
+## NodeExporter
+
+This is a `DockerComposeService` with some specific configurations to ensure that your cadvisor scrapes your host machine
+and exposes its metrics.  This is an opinionated setup and if it does not match your needs, you can copy and modify the settings
+for the actual DockerComposeService.  Note, this is also a fully privileged container (even moreso than cadvisor) that is host networked
+and should not be exposed to the public internet.
+
+**The service is a Replace deployment, and does not have any TLS set up as it is intended to be used over secure loopback/vlan networks.**
+
+Importantly, we have an `expose` property that is meant to make you think about exposure of the port.  We do not recommend exposing
+your nodeexporter container to the public internet since it has elevated privileges.  Instead, you should expose it to interfaces that
+you control.  Particularly, if you are running an Observation Tool in a service network (like we do with our `PrometheusService`s),
+you will need to expose the node exporter on the Docker Gateway so that the Observation Tool can reach it via `host.docker.internal`.
+
+Note, since node exporter is not using the Docker network, it cannot resolve named network interfaces.  It has to have the IPs of 
+network interface gateways.  Because of this, you must use IP addresses, and in the case of the Docker Gateway, if you have a non-exotic
+`DockerInstall` you can use `dockerInstall.defaultDockerGatewayIP` to specify that.  Without this, you will fail to connect to the port.
+
+```typescript
+// Node exporter is reachable on loopback on via any `host.docker.internal:8081`
+new NodeExporterService(
+	"nodeexporter",
+	{
+		connection: instance.automationUserConnection,
+		homeDir: instance.automationUserHomeDir,
+		tmpCopyDir: "./tmp",
+		usernsRemap: dockerInstall.usernsRemap,
+		expose: {
+			port: 8081,
+			interfaceIps: ["127.0.0.1", dockerInstall.defaultDockerGatewayIP],
+		},
+	},
+	{
+		dependsOn: [dockerInstall],
+	},
+);
+
+// This is not reachable by a container trying to reach it at `host.docker.internal:8081`
+// Maybe you have a collector on the host for this...
+new NodeExporterService(
+	"nodeexporter",
+	{
+		connection: instance.automationUserConnection,
+		homeDir: instance.automationUserHomeDir,
+		tmpCopyDir: "./tmp",
+		usernsRemap: dockerInstall.usernsRemap,
+		expose: {
+			port: 8081,
+			interfaceIps: ["127.0.0.1"],
+		},
+	},
+	{
+		dependsOn: [dockerInstall],
+	},
+);
+```
+
+## GrafanaService
+
+This is a `DockerComposeService` that brings up a grafana Docker Image with some standarized interfaces for configuration.  Additionally,
+this will provide a `getGrafanaProvider()` method for getting a GrafanaProvider that should be able to link to other `pulumiverse/grafana`
+resources (like Dashboards, Users, etc.)
+
+### TLS
+
+`GrafanaService` tries to make it a heavy requirement to provide TLS for the instance.  This is because, if you were to expose this
+UI over the internet, sending user names and passwords will be vulnerable to man in the middle attacks.  This applies to calling
+`pulumiverse/grafana` resources as well, since all of those require a high-privileged admin user.
+
+There are a few options for setting up grafana with TLS:
+
+1. Adding a TLS certificate to the docker compose service for the domain that grafana is expected to be on.
+   This is the default behavior enforced by the `tls` property on the service.
+2. Adding a reverse proxy like traefik that perform TLS.  In that case, we can disable the on-machine TLS by setting 
+   `tls: 'NO_PUBLIC_CONNECTION'` so that it's clear we aren't expecting the outside internet to directly contact this.
+3. Using no TLS because we've only exposed Grafana on some internal network interface like a VLAN.  In this case, if
+   we are binding our service to the `eth1` vlan interface then passwords will only be sent between machines on the 
+   network or VPNs that are encrypting the data over the internet.
+
+#### 1 - TLS on the server
+
+Just like with the [blue green tls server termination](#example-2---tls-termination-at-blue-green-server), we can assume that we
+have our private key and .crt available.  (In our case, we'll assume they're a stored as config secrets because our security
+posture allows for that).
+
+```typescript
+```shell
+# assumes the files are on the local machine (do not commit!)
+cat cert.crt | pulumi config set certcrt --secret
+cat private.key | pulumi config set certkey --secret
+```
+
+With those secrets in tow, we mount specify the keys and GrafanaService will mount and reference them on our behalf.
+
+```typescript
+new GrafanaService('machine1-grafana', {
+      connection,
+      homeDir,
+      tmpCopyDir: "./tmp",
+      // Additional properties...
+      expose: {
+         port: 3001,
+         // We bind to all interfaces - presumably the public internet interface as well
+         interfaceIps: ['0.0.0.0']
+      },
+      tls: {
+         certKey: config.requireSecret("grafanacertcrt"),
+         certCrt: config.requireSecret("grafanacertkey"),
+         // Should match the domain for the keys
+         rootUrl: "grafana.example.com",
+      },
+      admin: {
+         initialPassword: config.requireSecret("grafanaAdminPassword")
+      }
+   },
+)
+```
+
+As long as your DNS can resolve `grafana.example.com` (or whatever domain you have) to the ip of the machine its on, you can
+reach grafana via tls.  (As a tip, if you're using a self-signed certificate without a true DNS record, you can always change
+your `/etc/hosts` file to point `grafana.example.com` to it).
+
+#### 2 - TLS terminates at an intermediary
+
+If you are doing this, you are probably running an nginx, HAProxy, or traefik instance on a the same or different machine that
+is configured with TLS.  You can again refer to [blue green tls server termination](#example-2---tls-termination-at-blue-green-server)
+for an idea of how to configure a traefik proxy for this task, and will need to make sure to join docker networks for
+grafana and the proxy if they are on the same machine, or have a way to send requests from the proxy machine to grafana internally
+over a LAN.
+
+If you had the proxy as a DockerComposeService on the same machine you might do something like:
+
+```typescript
+new GrafanaService('machine1-grafana', {
+      connection,
+      homeDir,
+      tmpCopyDir: "./tmp",
+      // Additional properties...
+      expose: {
+         port: 3001,
+         // We would just bind to the loopback interface for ssh troubleshooting
+         interfaceIps: ['127.0.0.1']
+      },
+      tls: 'NO_PUBLIC_CONNECTION',
+      admin: {
+         initialPassword: config.requireSecret("grafanaAdminPassword")
+      }
+      service: {
+         networks: [
+            "default",
+            "tlsProxy",
+         ],
+      }
+      networks: {
+         tlsProxy: {
+            external: true,
+            name: 'The NGINX prxoy service network name'.
+         }
+      },
+   },
+)
+```
+
+Otherwise, if we were dealing with a proxy on a different machine but on the same network in a LAN, we could do:
+
+```typescript
+new GrafanaService('machine1-grafana', {
+      connection,
+      homeDir,
+      tmpCopyDir: "./tmp",
+      // Additional properties...
+      expose: {
+         port: 3001,
+         // We would just bind to the loopback interface for ssh troubleshooting
+         // Also, we connect to the VLAN interface
+         interfaceIps: ['127.0.0.1', instance.vlanIp]
+      },
+      tls: 'NO_PUBLIC_CONNECTION',
+      admin: {
+         initialPassword: config.requireSecret("grafanaAdminPassword")
+      }
+   },
+)
+```
+
+#### 3 - Secure LAN/VLAN only access
+
+This type of configuration is exactly like the second option for #2.  We just need to bind the compose server to select 
+network interfaces and therefore our users can access them via: `http://<machine ip>:3001`
+
+### Managing the Admin Password
+
+The `admin` field has 2 different fields that are used.  This is because we need to initially create a password and then 
+perform a different set of actions to update admin passwords after that.  Additionally, we do not want to trigger a Docker
+Service false restart if we accidentally make it look like we're changing the initial password.
+
+Because of this, you should **always** keep the `initialPassword` set, and if you want to update the admin user's password, you
+should set the `currentPassword`.  DO NOT update the password in console as that will cause the password update resource to break
+because it will use the wrong password.
+
+### A customized Grafana Provider
+
+When you bring up `GrafanaService`, you can use `@pulumiverse/pulumi` to bring up additional resources afterwards (for instance, a
+datasource).  To keep things streamlined in the same project, `GrafanaService.getGrafanaProvider()` can be used to set the provider 
+for each `grafana` resource.  
+
+By default, GrafanaService makes a best effort to provide the correctly configured grafana provider.  That means that it will try:
+
+1. If `tls` is specified, it will try to connect with `https://{connnection.host}:{expose.port}`
+2. If no tls is specified, it will try to connect with `http://{connection.host}:{expose.port}`
+
+Please note that, since the defaults are using the `connection.host` that you add, if you are running without HTTPS, you should make
+sure that the host is not a public IP.  Keep in mind that public IPs for SSH commands in DockerComposeService are fine since they
+are encrypted.
+
+If these defaults are not good enough, you can specify the correct connection configurations via: `providerConnection`.
+This is valuable if you are using non-https and need to make sure that the machine is reached over a connected VPN (via some local
+VPN IP).  It is also useful if you just want to make sure the traffic goes via a different DNS record, etc.
+
+### Configuration Override
+
+The `GrafanaService` also provides a way for you to write config .ini file overrides.  Since we do not use .ini, we specify the
+configuration as a json object via `configOverrides`.  We also require a different `value` object so that you can be clear that
+some configuration values are secrets that should not be bled during Docker Compose start up, etc.
+
+For instance, if you want to override an ini like:
+
+```ini
+default = something
+
+[security]
+setting1 = value
+setting2 = secretValue
+
+[section2]
+another = value3
+```
+
+You would specify it as:
+
+```typescript
+{
+   default: {
+      value: 'something',
+   },
+   security: {
+      setting1: {
+         value: 'value',
+      },
+      setting2: {
+         value: pulumi.secret('secretValue'),
+         secret: true,
+      },
+   },
+   section2: {
+      another: {
+         value: 'value3'
+      }
+   }
+}
+```
+
+From the above, you can see that the setting2 value will be overridden but its text will be passed up as a docker
+compose secret.

@@ -81,7 +81,7 @@ interface BlueGreenInformation {
 	}[];
 }
 
-type ServiceInputified = PropsInputify<
+export type ServiceInputified = PropsInputify<
 	Omit<
 		v3.Service,
 		"secrets" | "container_name" | "volumes" | "build" | "healthcheck" | "user"
@@ -97,7 +97,7 @@ type ServiceInputified = PropsInputify<
 		 * Note: if you want to do a mount, either make sure it is an absolute path that is guaranteed
 		 * or that it is relative to the context you provided
 		 */
-		volumes?: pulumi.Input<pulumi.Input<string[]>>;
+		volumes?: pulumi.Input<pulumi.Input<string>[]>;
 		/**
 		 * Normal docker commpose build arguments with the exception of 'context', since that will
 		 * be uploaded to a starndard folder that will hold the compose.yaml within it.
@@ -163,8 +163,8 @@ export interface DockerComposeServiceArgs extends TempCopyDirArgs {
 		 * We actually recommend using a CIDR in the `DefaultInternalNetworkRange.WHOLE_RANGE`. Note, the range
 		 * has to be unique across the entire machine and other services.
 		 */
-		networkCIDR: string;
-		apis?: {
+		networkCIDR: pulumi.Input<string>;
+		apis?: pulumi.Input<{
 			/**
 			 * api keys matching the https://github.com/Tecnativa/docker-socket-proxy?tab=readme-ov-file#grant-or-revoke-access-to-certain-api-sections
 			 * keys including caps.
@@ -172,7 +172,7 @@ export interface DockerComposeServiceArgs extends TempCopyDirArgs {
 			 * 0 disables and 1 explicitly enables
 			 */
 			[api: string]: 0 | 1;
-		};
+		}>;
 		/**
 		 * Other options are configured by environment variable
 		 *
@@ -180,15 +180,15 @@ export interface DockerComposeServiceArgs extends TempCopyDirArgs {
 		 *
 		 * These are overridden by the explidit apis field if there's duplication
 		 */
-		env?: {
+		env?: pulumi.Input<{
 			[e: string]: string;
-		};
+		}>;
 	};
 	/**
 	 * You may not want to trigger new builds for some things that are mounted into containers.  This
 	 * is declaring assets/folders that will be loaded into a ./mnt directory.
 	 *
-	 * You can reference them via a docker mount `./mnt/<name>:<in_container>` in your service specification
+	 * These mounts will automatically be added to your volumes section of the docker service specification
 	 */
 	mounts?: pulumi.Input<
 		pulumi.Input<{
@@ -237,7 +237,13 @@ export interface DockerComposeServiceArgs extends TempCopyDirArgs {
 	 * The service description like you would declare in docker-compose
 	 * with a few things removed due to this resource setting up things like context, etc.
 	 */
-	service: ServiceInputified;
+	service: pulumi.Input<ServiceInputified>;
+	/**
+	 * This is the monitoring network that should have some sort of metric collector like prometheus or open telemetry on
+	 * it.  This is a simplified way of declaring the external network and adding it to the service so that
+	 * we can look up containers by DNS name.
+	 */
+	monitoringNetwork?: pulumi.Input<string>;
 	/**
 	 * Secrets that will be mounted via a file into the containers and given read-only access
 	 * to for the USER (unless overridden by secretUsers)
@@ -287,6 +293,12 @@ export interface DockerComposeServiceArgs extends TempCopyDirArgs {
 	 * If you need to force a reupload due to an interruption, you can do so by incrementing this number
 	 */
 	reuploadId?: number;
+	/**
+	 * This is an escape hatch if you are running into problems with docker compose up
+	 *
+	 * Specifially force
+	 */
+	upArgs?: pulumi.Input<pulumi.Input<string>[]>;
 }
 
 // Wait one more second to make sure we weren't racing
@@ -294,6 +306,7 @@ const BUFFER_WAIT_TIME_SECONDS = 1;
 const COMPOSE_FILE = "compose.yml";
 const BUILD_FOLDER = "build";
 const MOUNT_FOLDER = "mnt";
+const MONITORING_NETWORK = "monitoring";
 export const BLUE_GREEN_NETWORK = "blueGreenGateway";
 
 /**
@@ -326,6 +339,25 @@ export class DockerComposeService
 	implements WaitOnChildren
 {
 	last: pulumi.Input<pulumi.Resource>;
+	/**
+	 * This allows you to look up full network names from what you specified as something like:
+	 *
+	 * myNetwork: <network properties>
+	 *
+	 * If you did not supply a network, there will be a 'default' network that is resolved for you.
+	 */
+	createdNetworks: pulumi.Output<{
+		[composeNetworkName: string]: string;
+	}>;
+	/**
+	 * This is the full service name which is <compose name>-<service>.  This is helpful for any docker
+	 * related look ups that require the full compose name.
+	 */
+	fullServiceName: pulumi.Output<string>;
+	/**
+	 * Just the serviceName
+	 */
+	serviceName: pulumi.Output<string>;
 	constructor(
 		name: string,
 		args: DockerComposeServiceArgs,
@@ -345,6 +377,7 @@ export class DockerComposeService
 			homeDir,
 			accessDockerSocket,
 			usernsRemap,
+			monitoringNetwork,
 		} = args;
 
 		const serviceFolder = pulumi
@@ -377,6 +410,7 @@ export class DockerComposeService
 				blueGreenIn: blueGreen,
 				mountsIn: mounts,
 				accessDockerSocketIn: accessDockerSocket,
+				monitoringNetworkIn: monitoringNetwork,
 			})
 			.apply(
 				({
@@ -390,6 +424,7 @@ export class DockerComposeService
 					blueGreenIn,
 					mountsIn,
 					accessDockerSocketIn,
+					monitoringNetworkIn,
 				}) => {
 					if (deployTypeIn !== DockerDeployType.BlueGreen && blueGreenIn) {
 						throw new pulumi.InputPropertyError({
@@ -552,7 +587,7 @@ export class DockerComposeService
 							? sNetworks
 							: Object.keys(sNetworks);
 						networkNames.forEach((netName) => {
-							if (!networksIn[netName]) {
+							if (netName !== "default" && !networksIn[netName]) {
 								throw new Error(
 									`Attempting to use a network that is not declared in networks! ${netName}`,
 								);
@@ -680,7 +715,9 @@ export class DockerComposeService
 									: {}),
 								labels,
 								secrets: secretsIn?.map((s) => s.name),
-								networks: sNetworks,
+								networks: monitoringNetworkIn
+									? this.applySecondaryNetwork(sNetworks, MONITORING_NETWORK)
+									: sNetworks,
 								volumes: mappedVolumes,
 								pids_limit,
 								// Since we're enforcing user call outs, we need to add them here
@@ -703,6 +740,14 @@ export class DockerComposeService
 								[n: string]: v3.Network;
 							}),
 							...socketServiceOptions.socketNetworks,
+							...(monitoringNetworkIn
+								? {
+										[MONITORING_NETWORK]: {
+											external: true,
+											name: monitoringNetworkIn,
+										},
+									}
+								: {}),
 						},
 					};
 					return composeFile;
@@ -1019,6 +1064,7 @@ export class DockerComposeService
 				deployTypeIn: deployType,
 				composeFilePathIn: composeFilePath,
 				serviceIn: service,
+				upArgs: args.upArgs,
 			})
 			.apply(
 				async ({
@@ -1026,6 +1072,7 @@ export class DockerComposeService
 					deployTypeIn,
 					composeFilePathIn,
 					serviceIn,
+					upArgs,
 				}) => {
 					const maxWaitTimeout = Math.ceil(
 						(await this.getMaxWaitTimeSeconds(serviceIn.healthcheck)) +
@@ -1035,6 +1082,7 @@ export class DockerComposeService
 						deployType: deployTypeIn,
 						file: composeFilePathIn,
 						maxWaitTimeout,
+						upArgs: upArgs ?? [],
 					});
 				},
 			);
@@ -1129,6 +1177,36 @@ export class DockerComposeService
 			},
 		);
 
+		// Create a network output
+		this.createdNetworks = pulumi
+			.output({
+				networksIn: networks,
+				serviceNameIn: serviceName,
+			})
+			.apply(({ networksIn, serviceNameIn }) => {
+				if (!networksIn) {
+					return {
+						default: `${serviceNameIn}_default`,
+					};
+				}
+				return Object.keys(networksIn).reduce(
+					(created, nName) => {
+						const network = networksIn[nName];
+						if (!network.external) {
+							created[nName] =
+								(network.name as string) ?? `${serviceNameIn}_${nName}`;
+						}
+
+						return created;
+					},
+					{} as { [net: string]: string },
+				);
+			});
+		this.fullServiceName = pulumi
+			.output(serviceName)
+			.apply((sName) => `${sName}-${sName}`);
+		this.serviceName = pulumi.output(serviceName);
+
 		// This is our teardown script that only triggers when the upper component is removed completely
 		new remote.Command(
 			`${name}-on-full-delete`,
@@ -1161,6 +1239,23 @@ export class DockerComposeService
 				parent: this,
 			},
 		);
+
+		this.registerOutputs({
+			createdNetworks: this.createdNetworks,
+			fullServiceName: this.fullServiceName,
+			serviceName: this.serviceName,
+		});
+	}
+
+	private applySecondaryNetwork(
+		networkObj: v3.Service["networks"],
+		network: string,
+	) {
+		if (!networkObj) {
+			return ["default", network];
+		}
+		this.addNetwork(networkObj, network);
+		return networkObj;
 	}
 
 	private getSocketServiceSidecarOptions(
@@ -1203,6 +1298,18 @@ export class DockerComposeService
 				} as v3.Service,
 			},
 		};
+	}
+
+	/**
+	 * Returns a docker exec command for the command supplied
+	 *
+	 * @param shell The shell that you would normally run docker exec -it <container> <shell> with
+	 * @param podNumber
+	 */
+	public getExecCommand(shell: string, command: string, podNumber: number = 1) {
+		return this.fullServiceName.apply((serviceName) => {
+			return `docker exec ${serviceName}-${podNumber} ${shell} -c "${command}"`;
+		});
 	}
 
 	/**

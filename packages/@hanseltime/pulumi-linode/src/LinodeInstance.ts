@@ -147,6 +147,7 @@ export class LinodeInstance extends pulumi.ComponentResource {
 	automationUserConnection: pulumi.Output<types.input.remote.ConnectionArgs>;
 	automationUserSudoCopyTmpDir: pulumi.Output<string>;
 	instance: linode.Instance;
+	vlanIp: pulumi.Output<string> | undefined;
 
 	constructor(
 		name: string,
@@ -442,13 +443,12 @@ export class LinodeInstance extends pulumi.ComponentResource {
 			}
 			return user;
 		});
-		this.automationUserConnection;
-		this.automationUserHomeDir;
-		this.automationUserSudoCopyTmpDir;
+		this.vlanIp = args.vlan ? pulumi.output(args.vlan.ip) : undefined;
 		this.registerOutputs({
 			automationUserConnection: this.automationUserConnection,
 			automationUserHomeDir: this.automationUserHomeDir,
 			automationUserSudoCopyTmpDir: this.automationUserSudoCopyTmpDir,
+			vlanIp: this.vlanIp,
 		});
 	}
 

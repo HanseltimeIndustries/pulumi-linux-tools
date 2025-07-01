@@ -1,6 +1,6 @@
 import type { v3 } from "@hanseltime/compose-types";
 import { CopyableAsset } from "@hanseltime/pulumi-file-utils";
-import { SudoCopyToRemote } from "@hanseltime/pulumi-linux";
+import { Network, SudoCopyToRemote } from "@hanseltime/pulumi-linux";
 import { shellStrings } from "@hanseltime/pulumi-linux-base";
 import type {
 	IpV4TablesRule,
@@ -31,22 +31,6 @@ export enum FireWallPresets {
 	 * Any ip requester is allowed through
 	 */
 	DangerousAllAccess = "dangerousallaccess",
-}
-
-/**
- * Little helper class to make it easier to get a cidr for your services - cannot do validation
- */
-export class DefaultInternalNetworkRange {
-	private static BASE_IP_ARR = [172, 255, 0, 0];
-	static WHOLE_RANGE = `${this.BASE_IP_ARR.join(".")}/16`;
-	/**
-	 * Returns a /24 CIDR 256 IPs incremented up from the base 172.255.0.0
-	 */
-	static get_24CIDR(n: number) {
-		const range = [...DefaultInternalNetworkRange.BASE_IP_ARR];
-		range[2] = range[2] + n;
-		return `${range.join(".")}/24`;
-	}
 }
 
 interface DockerInstallArgs extends TempCopyDirArgs {
@@ -228,8 +212,16 @@ export class DockerInstall
 		start: number;
 		length: number;
 	}>;
+	/**
+	 * The expected network ip of the default docker gateway (that things like mounting the host-gateway will involve)
+	 *
+	 * Note: if you have a very exotic network setup, this only infers from daemon.json and may be wrong.
+	 */
+	defaultDockerGatewayIP: pulumi.Output<string>;
 
 	last: pulumi.Input<pulumi.Resource>;
+
+	defaultInternalNetworkRange: Network;
 
 	/**
 	 * The full network name for compose services
@@ -242,6 +234,11 @@ export class DockerInstall
 	) {
 		super(`${LIBRARY_PREFIX}:DockerInstall`, name, args, opts);
 
+		this.defaultInternalNetworkRange = new Network(
+			`name-default-internal-range`,
+			"172.255.0.0/16",
+		);
+
 		// Commands taken from: https://docs.docker.com/engine/install/ubuntu/
 		const installCommand =
 			`apt-get update && apt-get install -y ca-certificates curl acl && ` +
@@ -253,7 +250,7 @@ export class DockerInstall
 			// Some apt updates were dropping the docker group so we add it
 			`(getent group docker || sudo groupadd docker && newgrp docker && echo "we have added a docker group")`;
 
-		const etcDocker = pulumi
+		const fullDaemonJson = pulumi
 			.output({
 				networking: args.networking,
 				daemonJson: args.daemonJson,
@@ -288,22 +285,53 @@ export class DockerInstall
 					});
 				}
 
-				const daemonFile = new pulumi.asset.StringAsset(
-					JSON.stringify(
-						{
-							...BASE_DEFAULT_DOCKER_DAEMON,
-							...daemonJson,
-							bip: overrideBip ?? networking.default,
-						},
-						undefined,
-						"  ",
-					),
-				);
-				// Do this so that on start up, we create the docker directory if necessary
-				return new pulumi.asset.AssetArchive({
-					"daemon.json": daemonFile,
-				});
+				return {
+					...BASE_DEFAULT_DOCKER_DAEMON,
+					...daemonJson,
+					bip: overrideBip ?? networking.default,
+				};
 			});
+
+		this.defaultDockerGatewayIP = fullDaemonJson.apply(
+			(daemonJson: DockerDaemonJson) => {
+				if (daemonJson["host-gateway-ip"]) {
+					return daemonJson["host-gateway-ip"];
+				}
+				if (daemonJson.bip) {
+					const ipPieces = daemonJson.bip.split("/")[0].split(".");
+					let lastOctet = ipPieces[3];
+					if (lastOctet === "0") {
+						lastOctet = "1";
+					}
+					return `${ipPieces[0]}.${ipPieces[1]}.${ipPieces[2]}.${lastOctet}`;
+				}
+				if (daemonJson["default-address-pools"]) {
+					const defaultAddressPools = daemonJson["default-address-pools"];
+					if (defaultAddressPools.length > 0) {
+						// We just use the first here
+						const initialCIDR = defaultAddressPools[0].base;
+						const ipPieces = initialCIDR.split("/")[0].split(".");
+						let lastOctet = ipPieces[3];
+						if (lastOctet === "0") {
+							lastOctet = "1";
+						}
+						return `${ipPieces[0]}.${ipPieces[1]}.${ipPieces[2]}.${lastOctet}`;
+					}
+				}
+				// Use the default network gateway address
+				return "172.17.0.1";
+			},
+		);
+
+		const etcDocker = fullDaemonJson.apply((daemonJson) => {
+			const daemonFile = new pulumi.asset.StringAsset(
+				JSON.stringify(daemonJson, undefined, "  "),
+			);
+			// Do this so that on start up, we create the docker directory if necessary
+			return new pulumi.asset.AssetArchive({
+				"daemon.json": daemonFile,
+			});
+		});
 
 		const etcDockerCopyable = new CopyableAsset(`${name}-daemonconfig`, {
 			synthName: "docker",
@@ -635,6 +663,7 @@ export class DockerInstall
 			blueGreenProxy = new DockerComposeService(
 				`${name}-blue-green-proxy`,
 				{
+					upArgs: ["--force-recreate"],
 					usernsRemap: this.usernsRemap,
 					name: gatewayProject,
 					deployType: DockerDeployType.Replace,
@@ -655,7 +684,10 @@ export class DockerInstall
 						apis: {
 							CONTAINERS: 1,
 						},
-						networkCIDR: DefaultInternalNetworkRange.get_24CIDR(0),
+						networkCIDR: this.defaultInternalNetworkRange.claimIPCIDR(
+							"172.255.0.0/26",
+							"bluegreen-socket-access",
+						).cidr,
 					},
 					service: {
 						image: "traefik:v3.3",
@@ -693,6 +725,7 @@ export class DockerInstall
 		this.registerOutputs({
 			last: this.last,
 			usernsRemap: this.usernsRemap,
+			defaultDockerGatewayIP: this.defaultDockerGatewayIP,
 		});
 	}
 }

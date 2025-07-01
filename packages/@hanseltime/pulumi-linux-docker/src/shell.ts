@@ -16,23 +16,28 @@ export function dockerUpCommand(
 		 * The maximum timeout to wait before healthy - if -1, does not wait for health checks
 		 */
 		maxWaitTimeout: number;
+		/**
+		 * Args to add to the compose up command
+		 */
+		upArgs: string[];
 	},
 ) {
-	const { deployType, file, maxWaitTimeout } = opts;
+	const { deployType, file, maxWaitTimeout, upArgs } = opts;
 	const noWait = maxWaitTimeout == -1;
-
+	const upArgsStr = upArgs.join(" ");
 	const fileArg = `-f ${file}`;
+	const collectLogsOnFailure = `(docker compose ${fileArg} logs ${serviceName} && exit 33)`;
 	switch (deployType) {
 		case DockerDeployType.Replace: {
 			const waitArg = noWait ? "" : `--wait --wait-timeout ${maxWaitTimeout}`;
-			return `docker compose ${fileArg} build ${serviceName} && docker compose ${fileArg} stop ${serviceName} && docker compose ${fileArg} up -d ${waitArg} ${serviceName}`;
+			return `docker compose ${fileArg} build ${serviceName} && docker compose ${fileArg} stop ${serviceName} && docker compose ${fileArg} up ${upArgsStr} -d ${waitArg} ${serviceName} || ${collectLogsOnFailure}`;
 		}
 		case DockerDeployType.BlueGreen: {
 			const waitArg = noWait ? "" : `--timeout ${maxWaitTimeout}`;
 			// We call compose up to make sure scaling didn't get messed up
 			// Due to rollout just doubling current containers
 			// We don't need a --wait becuase rollout does a wait operation
-			return `docker compose ${fileArg} build ${serviceName} && docker rollout ${fileArg} ${waitArg} ${serviceName} && docker compose ${fileArg} up -d ${serviceName}`;
+			return `docker compose ${fileArg} build ${serviceName} && docker rollout ${fileArg} ${waitArg} ${serviceName} || ${collectLogsOnFailure} && docker compose ${fileArg} up ${upArgsStr} -d ${serviceName}`;
 		}
 		default:
 			throw new Error(`Unexpected deployType: ${deployType}`);
