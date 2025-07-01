@@ -61,6 +61,30 @@ range
 
 ## Methods
 
+### checkIpRange()
+
+> **checkIpRange**(`ipAddress`, `name`, `mode`): `void`
+
+#### Parameters
+
+##### ipAddress
+
+`string`
+
+##### name
+
+`string`
+
+##### mode
+
+`"out"` | `"in"`
+
+#### Returns
+
+`void`
+
+***
+
 ### claimIP()
 
 > **claimIP**(`ipAddress`, `name`): `void`
@@ -84,3 +108,23 @@ a readable name to identify which machine/interface is claiming this ip (for tro
 #### Returns
 
 `void`
+
+***
+
+### claimIPCIDR()
+
+> **claimIPCIDR**(`cidr`, `name`): `Network`
+
+#### Parameters
+
+##### cidr
+
+`string`
+
+##### name
+
+`string`
+
+#### Returns
+
+`Network`

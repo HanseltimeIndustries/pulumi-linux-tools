@@ -23,6 +23,7 @@
 		"@hanseltime/swc-plugin-node-globals-inject": "^1.0.0",
 		"@pulumi/command": "^1.0.3",
 		"@pulumi/pulumi": "^3.158.0",
+		"@pulumiverse/grafana": "^0.16.3",
 		"@swc/cli": "^0.5.2",
 		"@swc/core": "^1.10.1",
 		"@types/jest": "^29.5.11",
@@ -41,6 +42,9 @@
 	"peerDependencies": {
 		"@pulumi/command": "^1.0.3",
 		"@pulumi/pulumi": "^3.158.0"
+	},
+	"optionalDependencies": {
+		"@pulumiverse/grafana": "^0.16.3"
 	},
 	"scripts": {
 		"test": "jest",
@@ -65,6 +69,7 @@
 		"@hanseltime/pulumi-linux": "workspace:^",
 		"@hanseltime/pulumi-linux-base": "workspace:^",
 		"@hanseltime/pulumi-linux-iptables": "workspace:^",
-		"@hanseltime/traefik": "workspace:^"
+		"@hanseltime/traefik": "workspace:^",
+		"node-fetch": "^3.3.2"
 	}
 }

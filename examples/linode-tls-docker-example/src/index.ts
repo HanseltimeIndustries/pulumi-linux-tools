@@ -1,9 +1,14 @@
 import { CopyableAsset } from "@hanseltime/pulumi-file-utils";
 import { LinodeInstance } from "@hanseltime/pulumi-linode";
 import {
+	CAdvisorService,
 	DockerComposeService,
 	DockerDeployType,
 	DockerInstall,
+	GrafanaService,
+	NodeExporterService,
+	PrometheusService,
+	PrometheusWithDockerSD,
 } from "@hanseltime/pulumi-linux-docker";
 import {
 	IpSetResource,
@@ -15,6 +20,7 @@ import {
 import { TraefikRouteRule } from "@hanseltime/traefik";
 import * as pulumi from "@pulumi/pulumi";
 import * as std from "@pulumi/std";
+import * as grafana from "@pulumiverse/grafana";
 import { readFileSync } from "fs";
 import { dump } from "js-yaml";
 import { homedir } from "os";
@@ -242,6 +248,291 @@ const dockerInstall = new DockerInstall(
 		dependsOn: [ipv6BlacklistSet, ipv4BlacklistSet, instance],
 	},
 );
+
+// Enables CAdvisor, NodeExporter, Prometheus (With an agent)
+const withMonitoring = config.get("withMonitoring");
+if (withMonitoring) {
+	const prometheusAgentMock = config.get("prometheusAgentMock");
+	// To support agent -> central server behavior (but on the same machine), we swap some server properties
+	const prometheusCentralArgs = prometheusAgentMock
+		? {
+				cliFlags: [
+					"--web.enable-remote-write-receiver",
+					"--web.enable-lifecycle",
+				],
+				scrapeSelf: false, // In this scenario, the service discovery find this and self-reports
+			}
+		: {
+				cliFlags: ["--web.enable-lifecycle"],
+				scrapeSelf: true, // Since there's no agent on this machine, we do the scraping
+			};
+
+	let scrapePrometheus: PrometheusService;
+	let prometheusCentral: PrometheusService;
+	if (prometheusAgentMock) {
+		prometheusCentral = new PrometheusService(
+			"central-prometheus",
+			{
+				serviceName: "prometheus-central",
+				mode: "server",
+				connection: instance.automationUserConnection,
+				homeDir: instance.automationUserHomeDir,
+				tmpCopyDir: "./tmp",
+				usernsRemap: dockerInstall.usernsRemap,
+				expose: {
+					port: 9090,
+					// We will access this via grafana so only exposing it on the loopback is fine for ssh troubleshoots
+					interfaceIps: ["127.0.0.1"],
+				},
+				...prometheusCentralArgs,
+				prometheusConfig: {},
+			},
+			{
+				dependsOn: [dockerInstall],
+			},
+		);
+		scrapePrometheus = new PrometheusWithDockerSD(
+			"prometheus",
+			{
+				serviceName: "prometheus-agent",
+				mode: "agent",
+				connection: instance.automationUserConnection,
+				homeDir: instance.automationUserHomeDir,
+				tmpCopyDir: "./tmp",
+				expose: {
+					port: 9091,
+					// We will access this via grafana so only exposing it on the loopback is fine for ssh troubleshoots
+					interfaceIps: ["127.0.0.1"],
+				},
+				usernsRemap: dockerInstall.usernsRemap,
+				dockerSocketNetworkCIDR:
+					dockerInstall.defaultInternalNetworkRange.claimIPCIDR(
+						"172.255.0.64/26",
+						"prometheus-socket-access",
+					).cidr,
+				upArgs: ["--force-recreate"],
+				cliFlags: ["--web.enable-lifecycle"],
+				prometheusConfig: {
+					remote_write: [
+						{
+							url: pulumi
+								.output({
+									sName: prometheusCentral.serviceName,
+									port: prometheusCentral.privatePort,
+								})
+								.apply(
+									({ sName, port }) => `http://${sName}:${port}/api/v1/write`,
+								),
+						},
+					],
+				},
+				monitoringNetwork: prometheusCentral.monitoringNetwork,
+			},
+			{
+				dependsOn: [dockerInstall, prometheusCentral],
+			},
+		);
+	} else {
+		prometheusCentral = new PrometheusWithDockerSD(
+			"central-prometheus",
+			{
+				serviceName: "prometheus-central",
+				mode: "server",
+				connection: instance.automationUserConnection,
+				homeDir: instance.automationUserHomeDir,
+				tmpCopyDir: "./tmp",
+				usernsRemap: dockerInstall.usernsRemap,
+				expose: {
+					port: 9090,
+					// We will access this via grafana so only exposing it on the loopback is fine for ssh troubleshoots
+					interfaceIps: ["0.0.0.0"],
+				},
+				dockerSocketNetworkCIDR:
+					dockerInstall.defaultInternalNetworkRange.claimIPCIDR(
+						"172.255.0.64/26",
+						"prometheus-socket-access",
+					).cidr,
+				...prometheusCentralArgs,
+				prometheusConfig: {},
+			},
+			{
+				dependsOn: [dockerInstall],
+			},
+		);
+		scrapePrometheus = prometheusCentral;
+	}
+
+	new CAdvisorService(
+		"cadvisor",
+		{
+			connection: instance.automationUserConnection,
+			homeDir: instance.automationUserHomeDir,
+			tmpCopyDir: "./tmp",
+			usernsRemap: dockerInstall.usernsRemap,
+			expose: {
+				port: 8080,
+				interfaceIps: ["127.0.0.1"],
+			},
+			dockerSocketNetworkCIDR:
+				dockerInstall.defaultInternalNetworkRange.claimIPCIDR(
+					"172.255.1.0/26",
+					"cadvisor-socket-access",
+				).cidr,
+			monitoringNetwork: scrapePrometheus.monitoringNetwork,
+		},
+		{
+			dependsOn: [dockerInstall, scrapePrometheus],
+		},
+	);
+
+	new NodeExporterService(
+		"nodeexporter",
+		{
+			connection: instance.automationUserConnection,
+			homeDir: instance.automationUserHomeDir,
+			tmpCopyDir: "./tmp",
+			usernsRemap: dockerInstall.usernsRemap,
+			expose: {
+				port: 8081,
+				interfaceIps: ["127.0.0.1", dockerInstall.defaultDockerGatewayIP],
+			},
+		},
+		{
+			dependsOn: [dockerInstall],
+		},
+	);
+
+	const grafanaInstance = new GrafanaService(
+		"grafana",
+		{
+			name: "grafana",
+			connection: instance.automationUserConnection,
+			homeDir: instance.automationUserHomeDir,
+			tmpCopyDir: "./tmp",
+			usernsRemap: dockerInstall.usernsRemap,
+			expose: {
+				port: 3000,
+				interfaceIps: ["0.0.0.0"],
+			},
+			admin: {
+				initialPassword: config.requireSecret("grafanaAdminInitialPassword"),
+				currentPassword: config.requireSecret("grafanaAdminCurrentPassword"),
+			},
+			// We join to the prometheus network so we can look it up by service name and privatePort
+			monitoringNetwork: prometheusCentral.monitoringNetwork,
+			tls: {
+				certKey: config.requireSecret("grafanacertkey"),
+				certCrt: config.requireSecret("grafanacertcrt"),
+				rootUrl: "grafana.example.com", // initialize.sh should have made the key for this url
+			},
+			providerConnection: {
+				caCert: readFileSync(
+					join(__dirname, "..", "certs", "grafana.example.com.crt"),
+					"utf8",
+				).toString(),
+			},
+		},
+		{
+			dependsOn: [prometheusCentral],
+		},
+	);
+
+	const datasource = new grafana.oss.DataSource(
+		"prometheus-datasource",
+		{
+			name: "PrometheusCentral",
+			type: "prometheus",
+			accessMode: "proxy",
+			url: pulumi
+				.output({
+					serviceName: prometheusCentral.serviceName,
+					port: prometheusCentral.privatePort,
+				})
+				.apply(({ serviceName, port }) => `http://${serviceName}:${port}`),
+			isDefault: true,
+		},
+		{
+			dependsOn: [grafanaInstance],
+			provider: grafanaInstance.getGrafanaProvider(),
+		},
+	);
+
+	// Substitute in our datasource id via minimal schema
+	const dashboardJson = datasource.uid.apply((datasourceUid) => {
+		const datasourceConfig = JSON.parse(
+			readFileSync(join(__dirname, "dockerAndSystemDashboard.json")).toString(),
+		) as {
+			templating: {
+				list: {
+					datasource?: string;
+				}[];
+			};
+			panels: {
+				datasource?: {
+					type: string;
+					uid: string;
+				};
+				targets?: {
+					datasource?: {
+						type: string;
+						uid: string;
+					};
+				}[];
+			}[];
+		};
+		datasourceConfig.templating.list = datasourceConfig.templating.list.map(
+			(l) => {
+				if (l.datasource) {
+					return {
+						...l,
+						datasource: datasourceUid,
+					};
+				}
+				return l;
+			},
+		);
+		datasourceConfig.panels = datasourceConfig.panels.map((panel) => {
+			return {
+				...panel,
+				datasource: panel.datasource
+					? {
+							type: "prometheus",
+							uid: datasourceUid,
+						}
+					: undefined,
+				targets: panel.targets
+					? panel.targets.map((t) => {
+							return {
+								...t,
+								datasource: {
+									type: "prometheus",
+									uid: datasourceUid,
+								},
+							};
+						})
+					: undefined,
+			};
+		});
+
+		return JSON.stringify(datasourceConfig, undefined, 2);
+	});
+
+	/**
+	 * This is a slightly tweaked dashboard imported from #893 that will use
+	 * cadvisor and node exporter values for monitoring.
+	 */
+	new grafana.oss.Dashboard(
+		"dockerSystemsDashboard",
+		{
+			configJson: dashboardJson,
+			overwrite: true,
+		},
+		{
+			dependsOn: [grafanaInstance, datasource],
+			provider: grafanaInstance.getGrafanaProvider(),
+		},
+	);
+}
 
 new DockerComposeService(
 	"basic-server-replace",

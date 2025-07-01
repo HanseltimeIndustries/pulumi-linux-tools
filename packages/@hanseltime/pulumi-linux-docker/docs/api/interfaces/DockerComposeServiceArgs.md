@@ -32,30 +32,17 @@ instead of the mounted socket, but all maintained images should support this.
 
 #### apis?
 
-> `optional` **apis**: `object`
-
-##### Index Signature
-
-\[`api`: `string`\]: `0` \| `1`
-
-api keys matching the https://github.com/Tecnativa/docker-socket-proxy?tab=readme-ov-file#grant-or-revoke-access-to-certain-api-sections
-keys including caps.
-
-0 disables and 1 explicitly enables
+> `optional` **apis**: `Input`\<\{[`api`: `string`]: `0` \| `1`; \}\>
 
 #### env?
 
-> `optional` **env**: `object`
+> `optional` **env**: `Input`\<\{[`e`: `string`]: `string`; \}\>
 
 Other options are configured by environment variable
 
 https://github.com/Tecnativa/docker-socket-proxy?tab=readme-ov-file#grant-or-revoke-access-to-certain-api-sections
 
 These are overridden by the explidit apis field if there's duplication
-
-##### Index Signature
-
-\[`e`: `string`\]: `string`
 
 #### name?
 
@@ -65,7 +52,7 @@ Defaults to dockersocketproxy
 
 #### networkCIDR
 
-> **networkCIDR**: `string`
+> **networkCIDR**: `Input`\<`string`\>
 
 This is the network CIDR range for the internal network.  It should be > (2 * replicas * service + 4)
 
@@ -116,6 +103,16 @@ The expected home directory path (absolute) of the connection user
 
 ***
 
+### monitoringNetwork?
+
+> `optional` **monitoringNetwork**: `Input`\<`string`\>
+
+This is the monitoring network that should have some sort of metric collector like prometheus or open telemetry on
+it.  This is a simplified way of declaring the external network and adding it to the service so that
+we can look up containers by DNS name.
+
+***
+
 ### mounts?
 
 > `optional` **mounts**: `Input`\<`Input`\<\{ `additionalUsers?`: Input\<Input\<\{ userId: Input\<number\>; groupId: Input\<number\>; \}\>\[\]\> \| undefined; `name`: `Input`\<`string`\>; `onContainer`: `Input`\<`string`\>; `readWrite?`: `boolean`; `resource`: `Input`\<`Archive` \| `Asset`\>; \}\>[]\>
@@ -123,7 +120,7 @@ The expected home directory path (absolute) of the connection user
 You may not want to trigger new builds for some things that are mounted into containers.  This
 is declaring assets/folders that will be loaded into a ./mnt directory.
 
-You can reference them via a docker mount `./mnt/<name>:<in_container>` in your service specification
+These mounts will automatically be added to your volumes section of the docker service specification
 
 ***
 
@@ -185,7 +182,7 @@ In that case, you would maintain that the secret is only allowed by the '0' user
 
 ### service
 
-> **service**: `ServiceInputified`
+> **service**: `Input`\<[`ServiceInputified`](../type-aliases/ServiceInputified.md)\>
 
 The service description like you would declare in docker-compose
 with a few things removed due to this resource setting up things like context, etc.
@@ -199,6 +196,16 @@ with a few things removed due to this resource setting up things like context, e
 #### Inherited from
 
 [`TempCopyDirArgs`](TempCopyDirArgs.md).[`tmpCopyDir`](TempCopyDirArgs.md#tmpcopydir)
+
+***
+
+### upArgs?
+
+> `optional` **upArgs**: `Input`\<`Input`\<`string`\>[]\>
+
+This is an escape hatch if you are running into problems with docker compose up
+
+Specifially force
 
 ***
 

@@ -11,13 +11,22 @@
 
 ## Classes
 
-- [DefaultInternalNetworkRange](classes/DefaultInternalNetworkRange.md)
+- [CAdvisorService](classes/CAdvisorService.md)
 - [DockerComposeService](classes/DockerComposeService.md)
 - [DockerInstall](classes/DockerInstall.md)
+- [GrafanaService](classes/GrafanaService.md)
+- [NodeExporterService](classes/NodeExporterService.md)
+- [PrometheusService](classes/PrometheusService.md)
+- [PrometheusWithDockerSD](classes/PrometheusWithDockerSD.md)
 
 ## Interfaces
 
 - [DockerComposeServiceArgs](interfaces/DockerComposeServiceArgs.md)
+- [GrafanaConfigValue](interfaces/GrafanaConfigValue.md)
+- [GrafanaServiceArgs](interfaces/GrafanaServiceArgs.md)
+- [GrafanaServiceTLSConfig](interfaces/GrafanaServiceTLSConfig.md)
+- [PrometheusServiceArgs](interfaces/PrometheusServiceArgs.md)
+- [PrometheusWithDockerSDArgs](interfaces/PrometheusWithDockerSDArgs.md)
 - [TempCopyDirArgs](interfaces/TempCopyDirArgs.md)
 - [WaitOnChildren](interfaces/WaitOnChildren.md)
 
@@ -25,6 +34,7 @@
 
 - [CIDR](type-aliases/CIDR.md)
 - [DockerDaemonJson](type-aliases/DockerDaemonJson.md)
+- [ServiceInputified](type-aliases/ServiceInputified.md)
 
 ## Variables
 

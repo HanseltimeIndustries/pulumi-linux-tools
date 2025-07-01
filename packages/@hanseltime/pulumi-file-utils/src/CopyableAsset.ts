@@ -23,6 +23,7 @@ const INTERRUPT_EVENTS = [
 ];
 
 const CLEAN_UP_DIRS = [] as string[];
+const COPYABLE_ASSET_NO_CLEAN = process.env.COPYABLE_ASSET_NO_CLEAN == "true";
 
 // Because we're composing a temp asset, we always need to keep the timestamps the same so the file check doesn't replace everytime
 const DUMMY_TIMESTAMP = new Date("1995-12-17T03:24:00");
@@ -232,7 +233,7 @@ export class CopyableAsset {
 						recursive: true,
 					});
 					// Add to exit handler array
-					if (!noClean) {
+					if (!noClean && COPYABLE_ASSET_NO_CLEAN) {
 						CLEAN_UP_DIRS.push(resolve(process.cwd(), tmpDirRet!));
 					}
 					await utimes(tmpDirRet, DUMMY_TIMESTAMP, DUMMY_TIMESTAMP);
@@ -248,7 +249,7 @@ export class CopyableAsset {
 					});
 					// We want to clean up these files since they could hold the same amount of info
 					// as the synthetic
-					if (!noClean) {
+					if (!noClean && !COPYABLE_ASSET_NO_CLEAN) {
 						if (isAbsolute(tmpChangeDetectDirRet)) {
 							CLEAN_UP_DIRS.push(tmpChangeDetectDirRet);
 						} else {

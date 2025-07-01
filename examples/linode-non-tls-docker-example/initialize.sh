@@ -6,6 +6,8 @@
 #
 #########################################################
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 SSH_KEY=${SSH_PATH:-$HOME/.ssh/linde_non_tls_example_rsa}
 
 set +e;
@@ -22,6 +24,7 @@ echo
 ssh-keygen -b 2048 -t rsa -f $SSH_KEY -N $SSH_PASSWORD
 
 echo "Copying public key to project as part of version control..."
+mkdir -p ./public_keys
 cp $SSH_KEY.pub ./public_keys/
 
 echo "Saving ssh password..."
@@ -51,6 +54,9 @@ read -p "Please provide linode region to deploy in: " LINODE_REGION
 echo
 echo "pulumi config set linodeRegion ${LINODE_REGION}"
 pulumi config set linodeRegion ${LINODE_REGION}
+
+# See about adding monitoring
+${SCRIPT_DIR}/scripts/initialize-monitoring.sh
 
 echo "Success!"
 echo "Note: run 'set -a; source .env; set +a;' before running pulumi commands on your shell"

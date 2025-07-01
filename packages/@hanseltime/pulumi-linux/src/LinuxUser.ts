@@ -132,7 +132,7 @@ export class LinuxUser extends pulumi.ComponentResource {
 								extraDirsIn,
 								sshDirIn,
 							}) => {
-								return `useradd ${groups ? `-G ${groups.join(",")}` : ""} -m -d ${userDirIn} -p $(openssl passwd -6 "${password}") -s /bin/bash ${nameIn} && ${sshDirIn} && ${sudoersCreateOrupdateIn} ${extraDirsIn ? `&& ${extraDirsIn}` : ""}`;
+								return `useradd ${groups ? `-G ${groups.join(",")}` : ""} -m -d ${userDirIn} -p $(openssl passwd -6 '${password}') -s /bin/bash ${nameIn} && ${sshDirIn} && ${sudoersCreateOrupdateIn} ${extraDirsIn ? `&& ${extraDirsIn}` : ""}`;
 							},
 						),
 				),
@@ -157,7 +157,7 @@ export class LinuxUser extends pulumi.ComponentResource {
 								extraDirsIn,
 								sshDirIn,
 							}) =>
-								`usermod ${groups ? `-G ${groups.join(",")}` : ""} -m -d ${userDirIn} -p $(openssl passwd -6 "${password}") ${nameIn} && ${sshDirIn} && ${sudoersCreateOrupdateIn} ${extraDirsIn ? `&& ${extraDirsIn}` : ""}`,
+								`usermod ${groups ? `-G ${groups.join(",")}` : ""} -m -d ${userDirIn} -p $(openssl passwd -6 '${password}') ${nameIn} && ${sshDirIn} && ${sudoersCreateOrupdateIn} ${extraDirsIn ? `&& ${extraDirsIn}` : ""}`,
 						),
 				),
 				// TODO: this is not a complete delete since we aren't cleaning up resources and rebuilding won't create the same id

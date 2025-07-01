@@ -6,6 +6,8 @@
 #
 #########################################################
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 SSH_KEY=${SSH_PATH:-$HOME/.ssh/linde_tls_example_rsa}
 
 set +e;
@@ -22,6 +24,7 @@ echo
 ssh-keygen -b 2048 -t rsa -f $SSH_KEY -N $SSH_PASSWORD
 
 echo "Copying public key to project as part of version control..."
+mkdir -p ./public_keys
 cp $SSH_KEY.pub ./public_keys/
 
 echo "Saving ssh password..."
@@ -52,18 +55,11 @@ echo
 echo "pulumi config set linodeRegion ${LINODE_REGION}"
 pulumi config set linodeRegion ${LINODE_REGION}
 
-echo "Creating a self-signed TLS certificate for example.com..."
-openssl req -x509 -nodes -days 365 \
-  -newkey rsa:2048 \
-  -keyout example.com.key \
-  -out example.com.crt \
-  -subj "/C=US/ST=State/L=City/O=Organization/CN=example.com"
+# Create rootCA and key for example.com tls for our applications
+${SCRIPT_DIR}/scripts/initialize-common-keys.sh
 
-echo "Storing TLS key and crt as a pulumi secret..."
-echo "cat example.com.crt | pulumi config set certcrt --secret"
-cat example.com.crt | pulumi config set certcrt --secret
-echo "cat example.com.key | pulumi config set certkey --secret"
-cat example.com.key | pulumi config set certkey --secret
+# See about adding monitoring
+${SCRIPT_DIR}/scripts/initialize-monitoring.sh
 
 echo "Success!"
 echo "Note: run 'set -a; source .env; set +a;' before running pulumi commands on your shell"

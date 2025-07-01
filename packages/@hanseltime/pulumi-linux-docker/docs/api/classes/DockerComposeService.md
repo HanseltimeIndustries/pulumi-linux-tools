@@ -33,6 +33,13 @@ Deployment types:
 
 - `ComponentResource`
 
+## Extended by
+
+- [`CAdvisorService`](CAdvisorService.md)
+- [`GrafanaService`](GrafanaService.md)
+- [`NodeExporterService`](NodeExporterService.md)
+- [`PrometheusService`](PrometheusService.md)
+
 ## Implements
 
 - [`WaitOnChildren`](../interfaces/WaitOnChildren.md)
@@ -67,6 +74,27 @@ Deployment types:
 
 ## Properties
 
+### createdNetworks
+
+> **createdNetworks**: `Output`\<\{[`composeNetworkName`: `string`]: `string`; \}\>
+
+This allows you to look up full network names from what you specified as something like:
+
+myNetwork: <network properties>
+
+If you did not supply a network, there will be a 'default' network that is resolved for you.
+
+***
+
+### fullServiceName
+
+> **fullServiceName**: `Output`\<`string`\>
+
+This is the full service name which is <compose name>-<service>.  This is helpful for any docker
+related look ups that require the full compose name.
+
+***
+
 ### last
 
 > **last**: `Input`\<`Resource`\>
@@ -76,6 +104,14 @@ The last child that should be dependedOn
 #### Implementation of
 
 [`WaitOnChildren`](../interfaces/WaitOnChildren.md).[`last`](../interfaces/WaitOnChildren.md#last)
+
+***
+
+### serviceName
+
+> **serviceName**: `Output`\<`string`\>
+
+Just the serviceName
 
 ***
 
@@ -107,6 +143,34 @@ immediately available in a derived class's constructor after the
 #### Inherited from
 
 `pulumi.ComponentResource.getData`
+
+***
+
+### getExecCommand()
+
+> **getExecCommand**(`shell`, `command`, `podNumber`): `Output`\<`string`\>
+
+Returns a docker exec command for the command supplied
+
+#### Parameters
+
+##### shell
+
+`string`
+
+The shell that you would normally run docker exec -it <container> <shell> with
+
+##### command
+
+`string`
+
+##### podNumber
+
+`number` = `1`
+
+#### Returns
+
+`Output`\<`string`\>
 
 ***
 

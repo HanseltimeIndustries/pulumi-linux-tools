@@ -27,9 +27,11 @@
 		"@pulumi/linode": "^4.38.0",
 		"@pulumi/pulumi": "^3.158.0",
 		"@pulumi/std": "^2.2.0",
+		"@pulumiverse/grafana": "^0.16.3",
 		"dot-object": "^2.1.5",
 		"js-yaml": "^4.1.0",
 		"json-schema-to-typescript": "^15.0.4",
+		"node-fetch": "^3.3.2",
 		"parse-duration": "^2.1.4",
 		"tar": "^7.4.3"
 	},
