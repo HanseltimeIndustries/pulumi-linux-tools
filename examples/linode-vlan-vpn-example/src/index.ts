@@ -6,6 +6,7 @@ import {
 	IpTablesChain,
 	IpTablesInstall,
 	IpTablesSave,
+	PredefinedRules,
 } from "@hanseltime/pulumi-linux-iptables";
 import { WireGuardServer } from "@hanseltime/pulumi-linux-vpn";
 import * as pulumi from "@pulumi/pulumi";
@@ -111,38 +112,6 @@ const _instance2 = new LinodeInstance("machine2", {
 	},
 });
 
-const vpnServer = new WireGuardServer("machinetls-vpn-server", {
-	connection: instance.automationUserConnection,
-	interfaceName: "wg0",
-	apt: {
-		update: 0,
-	},
-	network: new Network("machinetls-vpn-network", "10.127.0.0/24"),
-	serverIp: "10.127.0.1",
-	listenPort: 51820,
-	serverKeys: "create-on-server",
-	// Note: you could have a vpn that proxies to the internet and has access to the vlan
-	// by adding this
-	// publicInternet: {
-	// 	interface: "eth0",
-	// },
-	vlan: {
-		interface: "eth1",
-		cidr: vlan.cidr,
-	},
-	peers: [
-		{
-			name: "myvpn",
-			ip: "10.127.0.2",
-			publicKey: readFileSync(
-				join(__dirname, "..", "public_keys", "vpn_myclient"),
-			).toString(),
-			presharedKey: "create-on-server",
-		},
-	],
-});
-
-// Start Create firewall resources
 const ipTablesInstall = new IpTablesInstall(
 	"iptables-install",
 	{
@@ -152,6 +121,45 @@ const ipTablesInstall = new IpTablesInstall(
 		dependsOn: [instance],
 	},
 );
+
+const vpnServer = new WireGuardServer(
+	"machinetls-vpn-server",
+	{
+		connection: instance.automationUserConnection,
+		interfaceName: "wg0",
+		apt: {
+			update: 0,
+		},
+		network: new Network("machinetls-vpn-network", "10.127.0.0/24"),
+		serverIp: "10.127.0.1",
+		listenPort: 51820,
+		serverKeys: "create-on-server",
+		// Note: you could have a vpn that proxies to the internet and has access to the vlan
+		// by adding this
+		// publicInternet: {
+		// 	interface: "eth0",
+		// },
+		vlan: {
+			interface: "eth1",
+			cidr: vlan.cidr,
+		},
+		peers: [
+			{
+				name: "myvpn",
+				ip: "10.127.0.2",
+				publicKey: readFileSync(
+					join(__dirname, "..", "public_keys", "vpn_myclient"),
+				).toString(),
+				presharedKey: "create-on-server",
+			},
+		],
+	},
+	{
+		dependsOn: [instance, ipTablesInstall],
+	},
+);
+
+// Start Create firewall resources
 const ipv4BlacklistSet = new IpSetResource(
 	"ipv4-blacklist",
 	{
@@ -182,10 +190,11 @@ const forwardIpTablesChain = new IpTablesChain(
 		table: "filter",
 		connection: instance.automationUserConnection,
 		alreadyCreated: true,
-		rulesIpV4: vpnServer.ipTablesRules.filter.forward.apply((fwdRules) => [
-			blacklistV4,
-			...fwdRules,
-		]),
+		rulesIpV4: pulumi
+			.output({
+				fwdRules: vpnServer.ipTablesRules.filter.forward,
+			})
+			.apply(({ fwdRules }) => [blacklistV4, ...fwdRules]),
 		rulesIpV6: [blacklistV6],
 	},
 	{
@@ -199,8 +208,38 @@ const inputIpTablesChain = new IpTablesChain(
 		table: "filter",
 		connection: instance.automationUserConnection,
 		alreadyCreated: true,
-		rulesIpV4: [blacklistV4],
-		rulesIpV6: [blacklistV6],
+		rulesIpV4: pulumi
+			.output({
+				vpnPortIn: vpnServer.port,
+			})
+			.apply(({ vpnPortIn }) => [
+				blacklistV4,
+				...PredefinedRules.onlyEgress({
+					interface: "eth0",
+					exceptionPorts: [
+						{
+							port: 22,
+							protocols: ["tcp", "udp"],
+						},
+						{
+							port: vpnPortIn,
+							protocols: ["udp", "tcp"],
+						},
+					],
+				}),
+			]),
+		rulesIpV6: [
+			blacklistV6,
+			...PredefinedRules.onlyEgress({
+				interface: "eth0",
+				exceptionPorts: [
+					{
+						port: 22,
+						protocols: ["tcp", "udp"],
+					},
+				],
+			}),
+		],
 	},
 	{
 		dependsOn: [ipv4BlacklistSet, ipv6BlacklistSet],

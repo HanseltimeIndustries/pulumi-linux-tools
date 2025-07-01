@@ -1,9 +1,6 @@
 {
-	"name": "linode-tls-docker-example",
+	"name": "linode-vlan-vpn-with-docker-example",
 	"main": "src/index.ts",
-	"workspaces": [
-		"packages/@hanseltime/*"
-	],
 	"scripts": {
 		"lint": "biome lint",
 		"format": "biome format",
@@ -20,8 +17,10 @@
 	"dependencies": {
 		"@hanseltime/compose-types": "^1.1.0",
 		"@hanseltime/pulumi-linode": "workspace:^",
+		"@hanseltime/pulumi-linux": "workspace:^",
 		"@hanseltime/pulumi-linux-docker": "workspace:^",
 		"@hanseltime/pulumi-linux-iptables": "workspace:^",
+		"@hanseltime/pulumi-linux-vpn": "workspace:^",
 		"@hanseltime/traefik": "workspace:^",
 		"@pulumi/command": "^1.0.3",
 		"@pulumi/linode": "^4.38.0",
