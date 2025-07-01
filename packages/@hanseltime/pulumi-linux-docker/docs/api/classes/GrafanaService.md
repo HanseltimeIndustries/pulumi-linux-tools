@@ -2,53 +2,26 @@
 
 ***
 
-[@hanseltime/pulumi-linux-docker](../README.md) / DockerComposeService
+[@hanseltime/pulumi-linux-docker](../README.md) / GrafanaService
 
-# Class: DockerComposeService
+# Class: GrafanaService
 
-A resource that is meant for smaller-scale rolling deployments via docker-compose.
+Simplified interface for setting up a Grafana DockerComposeService.
 
-Note: this type of resource and set up pales in comparison to something like k8s.  This exists
-      for you to trade off the complexity of understanding K8s for manual triage via SSH and
-      a familiarity with docker-compose.  If you anticipate scale, you will ultimately move past
-      this set of resources in the long-term.
-
-Each one of these components represents a separate docker compose file with a single
-service in it.  This creates a standardized set of folders around the compose file
-so that it can be run with updates on a single local machine.
-
-Folder structure:
-/<user root>/docker/<service name>/
-   compose.yml - maintained by this resource
-   mnt/
-     <name> - any mounted directories or files you name and provide here
-   build/ - the entire build.context archive that you provide (including Dockerfile)
-
-/var/pulumi-docker/.secrets/<service name> - contains secret files that will be mounted into the container
-
-Deployment types:
-		TODO -
+This service is a replace type service (since we don't see it as zero-downtime), and
+it creates some patterns for enforcing thinking about secrets for grafana configuration,
+as well as exposing Grafana Provider that can be used with other @pulumiverse/grafana
+resources to do stuff like setting up additional users, teams, and even managing dashboards.
 
 ## Extends
 
-- `ComponentResource`
-
-## Extended by
-
-- [`CAdvisorService`](CAdvisorService.md)
-- [`GrafanaService`](GrafanaService.md)
-- [`NodeExporterService`](NodeExporterService.md)
-- [`PrometheusService`](PrometheusService.md)
-
-## Implements
-
-- [`WaitOnChildren`](../interfaces/WaitOnChildren.md)
+- [`DockerComposeService`](DockerComposeService.md)
 
 ## Constructors
 
 ### Constructor
 
-> **new DockerComposeService**(`name`, `args`, `opts?`): `DockerComposeService`
+> **new GrafanaService**(`name`, `args`, `opts?`): `GrafanaService`
 
 #### Parameters
 
@@ -58,7 +31,7 @@ Deployment types:
 
 ##### args
 
-[`DockerComposeServiceArgs`](../interfaces/DockerComposeServiceArgs.md)
+[`GrafanaServiceArgs`](../interfaces/GrafanaServiceArgs.md)
 
 ##### opts?
 
@@ -66,11 +39,11 @@ Deployment types:
 
 #### Returns
 
-`DockerComposeService`
+`GrafanaService`
 
 #### Overrides
 
-`pulumi.ComponentResource.constructor`
+[`DockerComposeService`](DockerComposeService.md).[`constructor`](DockerComposeService.md#constructor)
 
 ## Properties
 
@@ -84,6 +57,10 @@ myNetwork: <network properties>
 
 If you did not supply a network, there will be a 'default' network that is resolved for you.
 
+#### Inherited from
+
+[`DockerComposeService`](DockerComposeService.md).[`createdNetworks`](DockerComposeService.md#creatednetworks)
+
 ***
 
 ### fullServiceName
@@ -93,6 +70,10 @@ If you did not supply a network, there will be a 'default' network that is resol
 This is the full service name which is <compose name>-<service>.  This is helpful for any docker
 related look ups that require the full compose name.
 
+#### Inherited from
+
+[`DockerComposeService`](DockerComposeService.md).[`fullServiceName`](DockerComposeService.md#fullservicename)
+
 ***
 
 ### last
@@ -101,9 +82,15 @@ related look ups that require the full compose name.
 
 The last child that should be dependedOn
 
-#### Implementation of
+#### Inherited from
 
-[`WaitOnChildren`](../interfaces/WaitOnChildren.md).[`last`](../interfaces/WaitOnChildren.md#last)
+[`DockerComposeService`](DockerComposeService.md).[`last`](DockerComposeService.md#last)
+
+***
+
+### port
+
+> **port**: `Output`\<`string`\>
 
 ***
 
@@ -112,6 +99,10 @@ The last child that should be dependedOn
 > **serviceName**: `Output`\<`string`\>
 
 Just the serviceName
+
+#### Inherited from
+
+[`DockerComposeService`](DockerComposeService.md).[`serviceName`](DockerComposeService.md#servicename)
 
 ***
 
@@ -124,7 +115,7 @@ and after deployments.
 
 #### Inherited from
 
-`pulumi.ComponentResource.urn`
+[`DockerComposeService`](DockerComposeService.md).[`urn`](DockerComposeService.md#urn)
 
 ## Methods
 
@@ -142,7 +133,7 @@ immediately available in a derived class's constructor after the
 
 #### Inherited from
 
-`pulumi.ComponentResource.getData`
+[`DockerComposeService`](DockerComposeService.md).[`getData`](DockerComposeService.md#getdata)
 
 ***
 
@@ -172,6 +163,22 @@ The shell that you would normally run docker exec -it <container> <shell> with
 
 `Output`\<`string`\>
 
+#### Inherited from
+
+[`DockerComposeService`](DockerComposeService.md).[`getExecCommand`](DockerComposeService.md#getexeccommand)
+
+***
+
+### getGrafanaProvider()
+
+> **getGrafanaProvider**(): `Provider`
+
+This will retrieve a configured grafana provider if selected
+
+#### Returns
+
+`Provider`
+
 ***
 
 ### getMaxWaitTimeSeconds()
@@ -189,6 +196,10 @@ The shell that you would normally run docker exec -it <container> <shell> with
 `Promise`\<`number`\>
 
 -1 if the healthcheck is no shell
+
+#### Inherited from
+
+[`DockerComposeService`](DockerComposeService.md).[`getMaxWaitTimeSeconds`](DockerComposeService.md#getmaxwaittimeseconds)
 
 ***
 
@@ -210,7 +221,7 @@ Returns the provider for the given module member, if one exists.
 
 #### Inherited from
 
-`pulumi.ComponentResource.getProvider`
+[`DockerComposeService`](DockerComposeService.md).[`getProvider`](DockerComposeService.md#getprovider)
 
 ***
 
@@ -234,7 +245,7 @@ constructors to use. To access the data use [getData](#getdata).
 
 #### Inherited from
 
-`pulumi.ComponentResource.initialize`
+[`DockerComposeService`](DockerComposeService.md).[`initialize`](DockerComposeService.md#initialize)
 
 ***
 
@@ -262,7 +273,7 @@ strictly necessary as this will automatically be called after the [initialize](#
 
 #### Inherited from
 
-`pulumi.ComponentResource.registerOutputs`
+[`DockerComposeService`](DockerComposeService.md).[`registerOutputs`](DockerComposeService.md#registeroutputs)
 
 ***
 
@@ -286,4 +297,4 @@ loaded into the same process.
 
 #### Inherited from
 
-`pulumi.ComponentResource.isInstance`
+[`DockerComposeService`](DockerComposeService.md).[`isInstance`](DockerComposeService.md#isinstance)

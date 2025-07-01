@@ -54,6 +54,22 @@ The full network name for compose services
 
 ***
 
+### defaultDockerGatewayIP
+
+> **defaultDockerGatewayIP**: `Output`\<`string`\>
+
+The expected network ip of the default docker gateway (that things like mounting the host-gateway will involve)
+
+Note: if you have a very exotic network setup, this only infers from daemon.json and may be wrong.
+
+***
+
+### defaultInternalNetworkRange
+
+> **defaultInternalNetworkRange**: `Network`
+
+***
+
 ### dockerUserIpTablesChain
 
 > **dockerUserIpTablesChain**: `IpTablesChain`

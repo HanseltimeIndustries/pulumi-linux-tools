@@ -81,6 +81,12 @@ and after deployments.
 
 `pulumi.ComponentResource.urn`
 
+***
+
+### vlanIp
+
+> **vlanIp**: `undefined` \| `Output`\<`string`\>
+
 ## Methods
 
 ### getData()

@@ -2,16 +2,13 @@
 
 ***
 
-[@hanseltime/pulumi-linux-docker](../README.md) / DockerComposeServiceArgs
+[@hanseltime/pulumi-linux-docker](../README.md) / GrafanaServiceArgs
 
-# Interface: DockerComposeServiceArgs
-
-If a resource is doing copy operations, some of them require the asset to be in
-a root-relative path
+# Interface: GrafanaServiceArgs
 
 ## Extends
 
-- [`TempCopyDirArgs`](TempCopyDirArgs.md)
+- `Omit`\<[`DockerComposeServiceArgs`](DockerComposeServiceArgs.md), `"service"` \| `"deployType"` \| `"blueGreen"`\>
 
 ## Properties
 
@@ -65,14 +62,48 @@ has to be unique across the entire machine and other services.
 
 If set to true, this will only allow GET and HEAD operations
 
+#### Inherited from
+
+`Omit.accessDockerSocket`
+
 ***
 
-### blueGreen?
+### admin
 
-> `optional` **blueGreen**: `Input`\<`BlueGreenInformation`\>
+> **admin**: `object`
 
-Required if using blue-green.  This should supply information about the traefik proxy that was configured
-and then should provide responsible mappings from the service ports to traefik.
+Admin user settings
+
+The initial password is what is used to bring up the admin instance.  If you ever need to change the admin password,
+do not change the initial.  Simply add the currentPassword.
+
+#### currentPassword?
+
+> `optional` **currentPassword**: `Input`\<`string`\>
+
+#### initialPassword
+
+> **initialPassword**: `Input`\<`string`\>
+
+The password for a brand new grafana.  To change it, keep this field but add the currentPassword
+
+***
+
+### configOverride?
+
+> `optional` **configOverride**: `Input`\<\{[`sectionOrNonSectionedKey`: `string`]: `Input`\<[`GrafanaConfigValue`](GrafanaConfigValue.md) \| \{[`k`: `string`]: `Input`\<[`GrafanaConfigValue`](GrafanaConfigValue.md)\>; \}\>; \}\>
+
+This will only override .ini just like with environment variables.
+
+Note, the values can be marked as secret, which is critical to not leaking those values when
+we set up the compose service.  If they are marked as secret, we will mount them as secrets and
+then refer to the via the __FILE environment variable for you.
+
+This is the json representation of a grafana configuration file.  Any top-level key: object is
+written out as is.
+
+[key]
+object.key1 = object.value1
 
 ***
 
@@ -82,16 +113,17 @@ and then should provide responsible mappings from the service ports to traefik.
 
 A list of environment variables to be added for the docker file build
 
+#### Inherited from
+
+`Omit.connection`
+
 ***
 
-### deployType
+### expose
 
-> **deployType**: [`DockerDeployType`](../enumerations/DockerDeployType.md)
+> **expose**: `Input`\<\{ `interfaceIps`: `Input`\<`Input`\<`string`\>[]\>; `port`: `Input`\<`number`\>; \}\>
 
-blue-green - we use docker compose to deploy both and then scale one down
-   If you use blue-green, then your ports are not actually exposed through docker and instead are mapped
-replace - this is a downtime operation.  We stop the current service and then bring it back up with the new build
-manual - this means that the docker run will never be called until you specifically take it down.
+The port that we will expose the grafana UI on and the interfaces attached.
 
 ***
 
@@ -100,6 +132,10 @@ manual - this means that the docker run will never be called until you specifica
 > **homeDir**: `Input`\<`string`\>
 
 The expected home directory path (absolute) of the connection user
+
+#### Inherited from
+
+`Omit.homeDir`
 
 ***
 
@@ -110,6 +146,10 @@ The expected home directory path (absolute) of the connection user
 This is the monitoring network that should have some sort of metric collector like prometheus or open telemetry on
 it.  This is a simplified way of declaring the external network and adding it to the service so that
 we can look up containers by DNS name.
+
+#### Inherited from
+
+`Omit.monitoringNetwork`
 
 ***
 
@@ -122,6 +162,10 @@ is declaring assets/folders that will be loaded into a ./mnt directory.
 
 These mounts will automatically be added to your volumes section of the docker service specification
 
+#### Inherited from
+
+`Omit.mounts`
+
 ***
 
 ### name
@@ -129,6 +173,10 @@ These mounts will automatically be added to your volumes section of the docker s
 > **name**: `Input`\<`string`\>
 
 The name of the service - must be unique on the machine
+
+#### Inherited from
+
+`Omit.name`
 
 ***
 
@@ -143,6 +191,33 @@ Note: no networks attaches to the default network, you will need to set the serv
 
 Keep in mind that blue-green applies it's own proxy network so you don't have to manage that.
 
+#### Inherited from
+
+`Omit.networks`
+
+***
+
+### providerConnection?
+
+> `optional` **providerConnection**: `Input`\<\{ `caCert?`: Input\<string\> \| undefined; `host?`: Input\<string\> \| undefined; `httpHeaders?`: Input\<\{ \[key: string\]: Input\<string\>; \}\> \| undefined; `insecureSkipVerify?`: Input\<boolean\> \| undefined; `port?`: Input\<number\> \| undefined; `protocol?`: Input\<"http" \| "https"\> \| undefined; `retries?`: Input\<number\> \| undefined; `retryStatusCodes?`: Input\<Input\<string\>\[\]\> \| undefined; `retryWait?`: Input\<number\> \| undefined; `storeDashboardSha256?`: Input\<boolean\> \| undefined; \}\>
+
+The service will do its best to set up a connection for a grafana.Provider by using the
+tls.rootUrl or (in the event of no tls, the machine connection).  If the machine connection is
+a public IP and you don't have TLS, you will want to not have this provider configured.  Instead
+you can override this with something like a VPN address (expecting that you'll be on the vpn while
+running this, etc.)
+
+***
+
+### reloadConfig?
+
+> `optional` **reloadConfig**: `number`
+
+If you are making configuration changes that require a reload or processing of the configuration
+file (like a TLS certificate update, which we already do, but this is just an example).  You can
+always change the number for the reload config to trigger us sending an HUP signal to the server
+which will cause a configuration reload.
+
 ***
 
 ### reuploadId?
@@ -150,6 +225,10 @@ Keep in mind that blue-green applies it's own proxy network so you don't have to
 > `optional` **reuploadId**: `number`
 
 If you need to force a reupload due to an interruption, you can do so by incrementing this number
+
+#### Inherited from
+
+`Omit.reuploadId`
 
 ***
 
@@ -159,6 +238,10 @@ If you need to force a reupload due to an interruption, you can do so by increme
 
 Secrets that will be mounted via a file into the containers and given read-only access
 to for the USER (unless overridden by secretUsers)
+
+#### Inherited from
+
+`Omit.secrets`
 
 ***
 
@@ -178,14 +261,35 @@ Another scenario for this would be if you wanted to have the secret be root acce
 an entrypoint that read the secret in before running your app under a less-privileged user.
 In that case, you would maintain that the secret is only allowed by the '0' user.
 
+#### Inherited from
+
+`Omit.secretUserIds`
+
 ***
 
-### service
+### service?
 
-> **service**: `Input`\<[`ServiceInputified`](../type-aliases/ServiceInputified.md)\>
+> `optional` **service**: `Omit`\<`Input`\<[`ServiceInputified`](../type-aliases/ServiceInputified.md)\>, `"healthcheck"` \| `"user"` \| `"ports"`\>
 
-The service description like you would declare in docker-compose
-with a few things removed due to this resource setting up things like context, etc.
+The normal docker compose service with a few arguments removed since we know what they are automatically
+
+***
+
+### tls
+
+> **tls**: `Input`\<[`GrafanaServiceTLSConfig`](GrafanaServiceTLSConfig.md)\> \| `"NO_PUBLIC_CONNECTION"`
+
+If you are using a @pulumiverse/grafana, you almost always NEED tls.  That's because
+the grafana provider will be send authentication requests to the server with sensitive
+credentials.  If you do this over HTTP, any man in the middle will be able to get those
+credentials and then access your grafana.
+
+If you don't want TLS and are fine with it, you can set as 'NO_PUBLIC_CONNECTION' to
+not have to use it.  This would make sense if you were connecting via a local VPN
+and accessing grafana over that VPN (which is doing encryption via the vpn tunnel).
+
+Additionally, by default we let the TLS certificate transition by grafana watching the keey in 5 minute
+intervals.  This avoids a restart of the service.  However, if yo
 
 ***
 
@@ -195,7 +299,7 @@ with a few things removed due to this resource setting up things like context, e
 
 #### Inherited from
 
-[`TempCopyDirArgs`](TempCopyDirArgs.md).[`tmpCopyDir`](TempCopyDirArgs.md#tmpcopydir)
+`Omit.tmpCopyDir`
 
 ***
 
@@ -206,6 +310,10 @@ with a few things removed due to this resource setting up things like context, e
 This is an escape hatch if you are running into problems with docker compose up
 
 Specifially force
+
+#### Inherited from
+
+`Omit.upArgs`
 
 ***
 
@@ -218,3 +326,7 @@ This is required and should match exactly how docker was installed on the machin
 This is used to calculate volume permissions in conjunction with the userIds.
 
 If your docker install has disabled the default usernsRemap, then you can provide a 0,0 setting (not recommended)
+
+#### Inherited from
+
+`Omit.usernsRemap`

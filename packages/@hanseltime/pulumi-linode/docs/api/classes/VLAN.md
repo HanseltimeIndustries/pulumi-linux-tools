@@ -92,6 +92,34 @@ on the network
 
 ## Methods
 
+### checkIpRange()
+
+> **checkIpRange**(`ipAddress`, `name`, `mode?`): `void`
+
+#### Parameters
+
+##### ipAddress
+
+`string`
+
+##### name
+
+`string`
+
+##### mode?
+
+`"out"` | `"in"`
+
+#### Returns
+
+`void`
+
+#### Inherited from
+
+`Network.checkIpRange`
+
+***
+
 ### claimIP()
 
 > **claimIP**(`ipAddress`, `name`): `void`
@@ -119,6 +147,30 @@ a readable name to identify which machine/interface is claiming this ip (for tro
 #### Inherited from
 
 `Network.claimIP`
+
+***
+
+### claimIPCIDR()
+
+> **claimIPCIDR**(`cidr`, `name`): `Network`
+
+#### Parameters
+
+##### cidr
+
+`string`
+
+##### name
+
+`string`
+
+#### Returns
+
+`Network`
+
+#### Inherited from
+
+`Network.claimIPCIDR`
 
 ***
 

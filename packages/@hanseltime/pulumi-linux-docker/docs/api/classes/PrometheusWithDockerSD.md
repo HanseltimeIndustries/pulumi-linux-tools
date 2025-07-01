@@ -2,53 +2,32 @@
 
 ***
 
-[@hanseltime/pulumi-linux-docker](../README.md) / DockerComposeService
+[@hanseltime/pulumi-linux-docker](../README.md) / PrometheusWithDockerSD
 
-# Class: DockerComposeService
+# Class: PrometheusWithDockerSD
 
-A resource that is meant for smaller-scale rolling deployments via docker-compose.
+Creates a DockerComposeService with prometheus setup with an automatic service discovery on the local docker socket.
 
-Note: this type of resource and set up pales in comparison to something like k8s.  This exists
-      for you to trade off the complexity of understanding K8s for manual triage via SSH and
-      a familiarity with docker-compose.  If you anticipate scale, you will ultimately move past
-      this set of resources in the long-term.
+This is meant to provide a safe (internal only) docker socket proxy for your prometheus instance to scrape from.
 
-Each one of these components represents a separate docker compose file with a single
-service in it.  This creates a standardized set of folders around the compose file
-so that it can be run with updates on a single local machine.
+IMPORTANT! Prometheus is a data storage application and if you run it on the same machine, you will need to be aware
+of storage/cpu/memory constraints and how they may impact your other docker applications.
 
-Folder structure:
-/<user root>/docker/<service name>/
-   compose.yml - maintained by this resource
-   mnt/
-     <name> - any mounted directories or files you name and provide here
-   build/ - the entire build.context archive that you provide (including Dockerfile)
+If you do not want to have that risk, running prometheus on another machine and using an OpenTelemetryCollector may
+be more desirable since collectors are just pipelines.
 
-/var/pulumi-docker/.secrets/<service name> - contains secret files that will be mounted into the container
-
-Deployment types:
-		TODO -
+TODO: standardize a way to skip services that are on internal networks or not connected aside from just requiring
+a prometheus.io/scrape label
 
 ## Extends
 
-- `ComponentResource`
-
-## Extended by
-
-- [`CAdvisorService`](CAdvisorService.md)
-- [`GrafanaService`](GrafanaService.md)
-- [`NodeExporterService`](NodeExporterService.md)
 - [`PrometheusService`](PrometheusService.md)
-
-## Implements
-
-- [`WaitOnChildren`](../interfaces/WaitOnChildren.md)
 
 ## Constructors
 
 ### Constructor
 
-> **new DockerComposeService**(`name`, `args`, `opts?`): `DockerComposeService`
+> **new PrometheusWithDockerSD**(`name`, `args`, `options?`): `PrometheusWithDockerSD`
 
 #### Parameters
 
@@ -58,19 +37,19 @@ Deployment types:
 
 ##### args
 
-[`DockerComposeServiceArgs`](../interfaces/DockerComposeServiceArgs.md)
+[`PrometheusWithDockerSDArgs`](../interfaces/PrometheusWithDockerSDArgs.md)
 
-##### opts?
+##### options?
 
 `ComponentResourceOptions`
 
 #### Returns
 
-`DockerComposeService`
+`PrometheusWithDockerSD`
 
 #### Overrides
 
-`pulumi.ComponentResource.constructor`
+[`PrometheusService`](PrometheusService.md).[`constructor`](PrometheusService.md#constructor)
 
 ## Properties
 
@@ -84,6 +63,10 @@ myNetwork: <network properties>
 
 If you did not supply a network, there will be a 'default' network that is resolved for you.
 
+#### Inherited from
+
+[`PrometheusService`](PrometheusService.md).[`createdNetworks`](PrometheusService.md#creatednetworks)
+
 ***
 
 ### fullServiceName
@@ -93,6 +76,10 @@ If you did not supply a network, there will be a 'default' network that is resol
 This is the full service name which is <compose name>-<service>.  This is helpful for any docker
 related look ups that require the full compose name.
 
+#### Inherited from
+
+[`PrometheusService`](PrometheusService.md).[`fullServiceName`](PrometheusService.md#fullservicename)
+
 ***
 
 ### last
@@ -101,9 +88,46 @@ related look ups that require the full compose name.
 
 The last child that should be dependedOn
 
-#### Implementation of
+#### Inherited from
 
-[`WaitOnChildren`](../interfaces/WaitOnChildren.md).[`last`](../interfaces/WaitOnChildren.md#last)
+[`PrometheusService`](PrometheusService.md).[`last`](PrometheusService.md#last)
+
+***
+
+### monitoringNetwork
+
+> **monitoringNetwork**: `Output`\<`string`\>
+
+The network name that this is on - ease of use for adding the network
+to other services
+
+#### Inherited from
+
+[`PrometheusService`](PrometheusService.md).[`monitoringNetwork`](PrometheusService.md#monitoringnetwork)
+
+***
+
+### port
+
+> **port**: `Output`\<`string`\>
+
+The port that this prometheus is exposed on
+
+#### Inherited from
+
+[`PrometheusService`](PrometheusService.md).[`port`](PrometheusService.md#port)
+
+***
+
+### privatePort
+
+> **privatePort**: `Output`\<`string`\>
+
+This is the port that prometheus is locally exposed on.  This is accessible within compose networks
+
+#### Inherited from
+
+[`PrometheusService`](PrometheusService.md).[`privatePort`](PrometheusService.md#privateport)
 
 ***
 
@@ -112,6 +136,10 @@ The last child that should be dependedOn
 > **serviceName**: `Output`\<`string`\>
 
 Just the serviceName
+
+#### Inherited from
+
+[`PrometheusService`](PrometheusService.md).[`serviceName`](PrometheusService.md#servicename)
 
 ***
 
@@ -124,7 +152,7 @@ and after deployments.
 
 #### Inherited from
 
-`pulumi.ComponentResource.urn`
+[`PrometheusService`](PrometheusService.md).[`urn`](PrometheusService.md#urn)
 
 ## Methods
 
@@ -142,7 +170,7 @@ immediately available in a derived class's constructor after the
 
 #### Inherited from
 
-`pulumi.ComponentResource.getData`
+[`PrometheusService`](PrometheusService.md).[`getData`](PrometheusService.md#getdata)
 
 ***
 
@@ -172,6 +200,10 @@ The shell that you would normally run docker exec -it <container> <shell> with
 
 `Output`\<`string`\>
 
+#### Inherited from
+
+[`PrometheusService`](PrometheusService.md).[`getExecCommand`](PrometheusService.md#getexeccommand)
+
 ***
 
 ### getMaxWaitTimeSeconds()
@@ -189,6 +221,10 @@ The shell that you would normally run docker exec -it <container> <shell> with
 `Promise`\<`number`\>
 
 -1 if the healthcheck is no shell
+
+#### Inherited from
+
+[`PrometheusService`](PrometheusService.md).[`getMaxWaitTimeSeconds`](PrometheusService.md#getmaxwaittimeseconds)
 
 ***
 
@@ -210,7 +246,7 @@ Returns the provider for the given module member, if one exists.
 
 #### Inherited from
 
-`pulumi.ComponentResource.getProvider`
+[`PrometheusService`](PrometheusService.md).[`getProvider`](PrometheusService.md#getprovider)
 
 ***
 
@@ -234,7 +270,7 @@ constructors to use. To access the data use [getData](#getdata).
 
 #### Inherited from
 
-`pulumi.ComponentResource.initialize`
+[`PrometheusService`](PrometheusService.md).[`initialize`](PrometheusService.md#initialize)
 
 ***
 
@@ -262,7 +298,7 @@ strictly necessary as this will automatically be called after the [initialize](#
 
 #### Inherited from
 
-`pulumi.ComponentResource.registerOutputs`
+[`PrometheusService`](PrometheusService.md).[`registerOutputs`](PrometheusService.md#registeroutputs)
 
 ***
 
@@ -286,4 +322,4 @@ loaded into the same process.
 
 #### Inherited from
 
-`pulumi.ComponentResource.isInstance`
+[`PrometheusService`](PrometheusService.md).[`isInstance`](PrometheusService.md#isinstance)
