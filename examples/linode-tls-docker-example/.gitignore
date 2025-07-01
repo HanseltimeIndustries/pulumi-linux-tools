@@ -1,4 +1,4 @@
 # Self-signed keys we create with initialize.sh
-example.com.key
-example.com.crt
+certs/*
+!certs/example.rootCA.pem
 tmp/
