@@ -1,5 +1,12 @@
 # @hanseltime/pulumi-linux
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [cf1e368]
+  - @hanseltime/pulumi-linux@1.2.0
+
 ## 0.2.1
 
 ### Patch Changes

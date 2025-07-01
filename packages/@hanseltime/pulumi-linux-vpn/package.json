@@ -1,6 +1,6 @@
 {
 	"name": "@hanseltime/pulumi-linux-vpn",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "Collection of pulumi resources for interacting with a linux OS and establishing a vpn server on it",
 	"license": "MIT",
 	"types": "./dist/types/index.d.ts",
